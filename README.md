@@ -1,0 +1,67 @@
+# managed-services-lib
+
+Core library for building [Codesphere managed-service provider backends](https://docs.codesphere.com/managed-services/create-custom-rest-backend). Implement one interface; the library serves it over the Codesphere REST contract.
+
+Not a runnable service. Start from [managed-services-template](https://github.com/codesphere-cloud/managed-services-template) for a working server with an example provider, Dockerfile, and CI.
+
+## Install
+
+```bash
+go get github.com/codesphere-cloud/managed-services-lib
+```
+
+Go 1.26+.
+
+## Provider interface
+
+```go
+type Provider[CreateParams model.ManagedService, Status any, UpdateParams any] interface {
+	Create(ctx context.Context, params CreateParams) error
+	List(ctx context.Context) ([]model.ServiceID, error)
+	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]Status, error)
+	Update(ctx context.Context, id model.ServiceID, args UpdateParams) error
+	Delete(ctx context.Context, id model.ServiceID) error
+
+	TakeBackup(ctx context.Context, args model.TakeBackupArgs) error
+	GetBackupStatus(ctx context.Context, backupID string, retry model.TakeBackupArgs) (BackupStatus, error)
+	DeleteBackup(ctx context.Context, args model.TakeBackupArgs) error
+}
+```
+
+Embed `provider.Base` for the shared dependencies (Kubernetes client, logger, storage class) and helpers. Embed `provider.UnimplementedBackups` if the provider has no backups; its backup endpoints then return `501`.
+
+## Wiring
+
+```go
+cfg, _ := config.Load()
+k8s, _ := client.NewKubernetesClient(cfg.Kubeconfig)
+logger := slog.Default()
+
+routes := map[string]func(*gin.RouterGroup){
+	"mysvc": func(g *gin.RouterGroup) {
+		provider.RegisterRoutes(g, mysvc.NewProvider(k8s, logger))
+	},
+}
+
+server, _ := api.NewServer(cfg, routes)
+server.Run()
+```
+
+`RegisterRoutes` mounts CRUD and backup endpoints under `/api/v1/{name}`.
+
+## Configuration
+
+`config.Load()` reads these environment variables:
+
+| Variable | Default | |
+|----------|---------|--|
+| `PORT` | `8080` | HTTP port |
+| `API_KEY` | — | auth key (off if unset) |
+| `KUBECONFIG` | — | kubeconfig path (in-cluster if unset) |
+| `ENVIRONMENT` | `development` | `development` / `production` |
+
+This is framework config only. Provider-specific config (storage class, credentials, image versions) belongs in your provider's constructor.
+
+## Development
+
+`make test`, `make lint`, `make mocks`. `make all` runs everything.

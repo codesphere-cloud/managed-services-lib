@@ -1,0 +1,8 @@
+all: true
+dir: "{{.InterfaceDir}}/mocks"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "mocks"
+packages:
+  github.com/codesphere-cloud/managed-services-lib/pkg/client:
+    interfaces:
+      KubernetesClient:

@@ -1,0 +1,19 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write        # create tags + GitHub Releases
+  pull-requests: write   # open/maintain the release PR
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: [self-hosted, slim, active]
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
