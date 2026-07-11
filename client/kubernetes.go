@@ -38,8 +38,6 @@ var (
 )
 
 // KubernetesClient defines the interface for Kubernetes operations.
-// This interface allows for easy mocking in tests and follows the
-// dependency inversion principle.
 //
 //go:generate mockery --name=KubernetesClient --output=./mocks --outpkg=mocks
 type KubernetesClient interface {
