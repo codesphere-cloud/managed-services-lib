@@ -1,3 +1,6 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider
 
 import (
@@ -7,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/client"
-	"github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	"github.com/codesphere-cloud/managed-services-lib/client"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.

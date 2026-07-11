@@ -1,3 +1,6 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package api
 
 import (
@@ -9,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/config"
-	"github.com/codesphere-cloud/managed-services-lib/pkg/middleware"
+	"github.com/codesphere-cloud/managed-services-lib/config"
+	"github.com/codesphere-cloud/managed-services-lib/middleware"
 )
 
 const apiVersion = "v1"

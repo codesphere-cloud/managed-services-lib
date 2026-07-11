@@ -1,3 +1,6 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package client
 
 import (
@@ -17,7 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 var (
@@ -35,8 +38,6 @@ var (
 )
 
 // KubernetesClient defines the interface for Kubernetes operations.
-// This interface allows for easy mocking in tests and follows the
-// dependency inversion principle.
 //
 //go:generate mockery --name=KubernetesClient --output=./mocks --outpkg=mocks
 type KubernetesClient interface {

@@ -1,3 +1,6 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider_test
 
 import (
@@ -6,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/provider"
+	"github.com/codesphere-cloud/managed-services-lib/provider"
 )
 
 func TestProvider(t *testing.T) {

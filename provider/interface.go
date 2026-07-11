@@ -1,9 +1,12 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider
 
 import (
 	"context"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 // Provider defines the interface for managed service providers.
@@ -14,9 +17,6 @@ import (
 //   - CreateParams: the full managed-service payload accepted on create
 //   - Status: the per-service status payload returned to the marketplace
 //   - UpdateParams: the partial update payload accepted on PATCH
-//
-// This follows the dependency inversion principle - the API layer depends
-// on this abstraction rather than concrete implementations.
 type Provider[CreateParams model.ManagedService, Status any, UpdateParams any] interface {
 	// Create creates a new managed service.
 	Create(ctx context.Context, params CreateParams) error
