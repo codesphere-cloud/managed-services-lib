@@ -1,5 +1,9 @@
 # managed-services-lib
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![CI](https://github.com/codesphere-cloud/managed-services-lib/actions/workflows/ci.yml/badge.svg)](https://github.com/codesphere-cloud/managed-services-lib/actions/workflows/ci.yml)
+[![Security](https://github.com/codesphere-cloud/managed-services-lib/actions/workflows/security.yml/badge.svg)](https://github.com/codesphere-cloud/managed-services-lib/actions/workflows/security.yml)
+
 Core library for building [Codesphere managed-service provider backends](https://docs.codesphere.com/managed-services/create-custom-rest-backend). Implement one interface; the library serves it over the Codesphere REST contract.
 
 Not a runnable service. Start from [managed-services-template](https://github.com/codesphere-cloud/managed-services-template) for a working server with an example provider, Dockerfile, and CI.
