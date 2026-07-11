@@ -1,9 +1,12 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider
 
 import (
 	"context"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 // UnimplementedBackups provides backup methods that report ErrNotImplemented.

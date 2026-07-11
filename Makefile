@@ -1,4 +1,4 @@
-.PHONY: all test cover lint fmt clean mocks build setup
+.PHONY: all test cover lint fmt clean mocks build setup generate-notice
 
 # Variables
 GO=go
@@ -40,3 +40,8 @@ build:
 # Setup git hooks
 setup:
 	git config core.hooksPath .githooks
+
+# Regenerate the third-party license NOTICE (requires the go-licenses tool dependency:
+# go get -tool github.com/google/go-licenses)
+generate-notice:
+	go tool go-licenses report --template .NOTICE.template --ignore github.com/codesphere-cloud/managed-services-lib ./... > NOTICE

@@ -3,6 +3,6 @@ dir: "{{.InterfaceDir}}/mocks"
 mockname: "Mock{{.InterfaceName}}"
 outpkg: "mocks"
 packages:
-  github.com/codesphere-cloud/managed-services-lib/pkg/client:
+  github.com/codesphere-cloud/managed-services-lib/client:
     interfaces:
       KubernetesClient:

@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	model "github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	model "github.com/codesphere-cloud/managed-services-lib/model"
 	mock "github.com/stretchr/testify/mock"
 
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

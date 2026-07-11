@@ -1,3 +1,6 @@
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider
 
 import (
@@ -12,8 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/codesphere-cloud/managed-services-lib/pkg/client"
-	"github.com/codesphere-cloud/managed-services-lib/pkg/model"
+	"github.com/codesphere-cloud/managed-services-lib/client"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 // DefaultPausedReplicas is the replica count providers restore to on unpause when

@@ -1,0 +1,11 @@
+version: "2"
+
+linters:
+  # Keep the default (standard) linter set and add goheader on top.
+  enable:
+    - goheader
+  settings:
+    goheader:
+      template: |-
+        Copyright (c) Codesphere Inc.
+        SPDX-License-Identifier: Apache-2.0

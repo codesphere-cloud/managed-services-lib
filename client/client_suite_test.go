@@ -1,4 +1,7 @@
-package api_test
+// Copyright (c) Codesphere Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+package client_test
 
 import (
 	"testing"
@@ -14,7 +17,7 @@ func TestMain(m *testing.M) {
 	)
 }
 
-func TestAPI(t *testing.T) {
+func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "API Suite")
+	RunSpecs(t, "Client Suite")
 }
