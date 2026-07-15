@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.3.0...v0.3.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* RegisterRoutes provider type parameters not inferrable ([22d8202](https://github.com/codesphere-cloud/managed-services-lib/commit/22d82021c2cfc31a0f2bfd95f5e0029588b43526))
+
 ## [0.3.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.2.0...v0.3.0) (2026-07-15)
 
 
