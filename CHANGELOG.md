@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.2.0...v0.3.0) (2026-07-15)
+
+
+### Features
+
+* allow CreateParams to be any type ([39b447f](https://github.com/codesphere-cloud/managed-services-lib/commit/39b447fba68e4f412eafa2efac25b9473d03c609))
+
 ## [0.2.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.1.0...v0.2.0) (2026-07-11)
 
 
