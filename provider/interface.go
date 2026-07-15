@@ -17,7 +17,7 @@ import (
 //   - CreateParams: the full managed-service payload accepted on create
 //   - Status: the per-service status payload returned to the marketplace
 //   - UpdateParams: the partial update payload accepted on PATCH
-type Provider[CreateParams model.ManagedService, Status any, UpdateParams any] interface {
+type Provider[CreateParams any, Status any, UpdateParams any] interface {
 	// Create creates a new managed service.
 	Create(ctx context.Context, params CreateParams) error
 

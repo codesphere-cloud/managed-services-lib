@@ -19,7 +19,7 @@ Go 1.26+.
 ## Provider interface
 
 ```go
-type Provider[CreateParams model.ManagedService, Status any, UpdateParams any] interface {
+type Provider[CreateParams any, Status any, UpdateParams any] interface {
 	Create(ctx context.Context, params CreateParams) error
 	List(ctx context.Context) ([]model.ServiceID, error)
 	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]Status, error)

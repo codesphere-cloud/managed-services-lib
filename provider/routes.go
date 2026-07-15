@@ -15,9 +15,9 @@ import (
 )
 
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.
-func RegisterRoutes[CreateParams model.ManagedService, Status any, UpdateParams any](
+func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 	group *gin.RouterGroup,
-	p Provider[CreateParams, Status, UpdateParams],
+	p Provider[any, Status, UpdateParams],
 ) {
 	// GET / - List all service IDs or get detailed status
 	group.GET("", func(c *gin.Context) {
