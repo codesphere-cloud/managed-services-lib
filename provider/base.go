@@ -50,6 +50,11 @@ type KubernetesClient = client.KubernetesClient
 type Base struct {
 	K8sClient KubernetesClient
 	Logger    *slog.Logger
+
+	// Jobs dispatches and inspects detached one-shot Jobs (e.g. backup/restore
+	// work that must run outside the provider pod). Build specs with ServiceJob;
+	// see BackupStatusFromJob for the backup status contract.
+	Jobs client.JobRunner
 }
 
 // NewBase creates a new Base provider.
@@ -57,6 +62,7 @@ func NewBase(k8sClient KubernetesClient, logger *slog.Logger) *Base {
 	return &Base{
 		K8sClient: k8sClient,
 		Logger:    logger,
+		Jobs:      client.NewJobRunner(k8sClient),
 	}
 }
 
