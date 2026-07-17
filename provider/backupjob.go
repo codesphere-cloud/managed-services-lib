@@ -7,12 +7,6 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/client"
 )
 
-// Backup is a framework contract operation (TakeBackup / GetBackupStatus /
-// DeleteBackup), so the lib owns the naming and status conventions its three
-// endpoints must agree on. Build the Job specs with ServiceJob using the
-// JobOpBackup / JobOpDeleteBackup prefixes — both auto-stamp the backup identity
-// labels; these helpers only resolve names and status.
-
 // BackupJobName is the name of the Job that takes a backup.
 func BackupJobName(backupID string) string {
 	return ServiceJobName(JobOpBackup, backupID)
