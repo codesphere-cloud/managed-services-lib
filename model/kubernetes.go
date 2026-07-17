@@ -112,6 +112,10 @@ const (
 	// ServiceIDLabel is the label key for the managed service ID.
 	ServiceIDLabel = LabelPrefix + "/id"
 
+	// BackupIDLabel is the label key for a backup ID. Applied to backup Jobs
+	// (alongside ServiceIDLabel) so a service's backups are discoverable.
+	BackupIDLabel = LabelPrefix + "/backup-id"
+
 	// ProviderLabel is the label key for the managed service provider type.
 	ProviderLabel = LabelPrefix + "/provider"
 
