@@ -33,39 +33,27 @@ type Provider[CreateParams any, Status any, UpdateParams any] interface {
 
 	// Delete deletes a managed service.
 	Delete(ctx context.Context, id model.ServiceID) error
+}
 
+// Backups is the optional backup capability, kept separate from Provider so a
+// provider opts in by implementing it.
+type Backups[BackupParams any] interface {
 	// TakeBackup initiates a backup of the managed service.
-	TakeBackup(ctx context.Context, args model.TakeBackupArgs) error
+	TakeBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
 
 	// GetBackupStatus returns the status of a backup.
-	GetBackupStatus(ctx context.Context, backupID string, retryArgs model.TakeBackupArgs) (BackupStatus, error)
+	GetBackupStatus(ctx context.Context, backupID model.BackupId, params BackupParams) (BackupStatus, error)
 
 	// DeleteBackup deletes a backup.
-	DeleteBackup(ctx context.Context, args model.TakeBackupArgs) error
+	DeleteBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
 }
 
-// BackupStatus represents the status of a backup operation.
+// BackupStatus is the backup-status response contract expected by Codesphere:
+// whether the backup exists (was taken successfully) and, if it failed, why.
 type BackupStatus struct {
-	// Phase is the current phase of the backup.
-	Phase BackupPhase `json:"phase"`
+	// Exists is true once the backup has been taken successfully.
+	Exists bool `json:"exists"`
 
-	// StartedAt is when the backup started.
-	StartedAt string `json:"startedAt,omitempty"`
-
-	// CompletedAt is when the backup completed.
-	CompletedAt string `json:"completedAt,omitempty"`
-
-	// Error contains any error message.
+	// Error contains the failure reason when the backup failed; empty otherwise.
 	Error string `json:"error,omitempty"`
 }
-
-// BackupPhase represents the phase of a backup.
-type BackupPhase string
-
-// Backup phase constants.
-const (
-	BackupPhasePending   BackupPhase = "pending"
-	BackupPhaseRunning   BackupPhase = "running"
-	BackupPhaseCompleted BackupPhase = "completed"
-	BackupPhaseFailed    BackupPhase = "failed"
-)

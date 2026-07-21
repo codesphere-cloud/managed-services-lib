@@ -6,6 +6,9 @@ package model
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
 
+// BackupId is a unique identifier for a managed service backup.
+type BackupId string
+
 // PlanParameters defines the resource allocation for a managed service.
 type PlanParameters struct {
 	// StorageMiB is the storage size in MiB.

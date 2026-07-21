@@ -25,14 +25,22 @@ type Provider[CreateParams any, Status any, UpdateParams any] interface {
 	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]Status, error)
 	Update(ctx context.Context, id model.ServiceID, args UpdateParams) error
 	Delete(ctx context.Context, id model.ServiceID) error
-
-	TakeBackup(ctx context.Context, args model.TakeBackupArgs) error
-	GetBackupStatus(ctx context.Context, backupID string, retry model.TakeBackupArgs) (BackupStatus, error)
-	DeleteBackup(ctx context.Context, args model.TakeBackupArgs) error
 }
 ```
 
-Embed `provider.Base` for the shared dependencies (Kubernetes client, logger, storage class) and helpers. Embed `provider.UnimplementedBackups` if the provider has no backups; its backup endpoints then return `501`.
+Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
+
+Backups are an **opt-in capability**, generic over the provider's own request type:
+
+```go
+type Backups[BackupParams any] interface {
+	TakeBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
+	GetBackupStatus(ctx context.Context, backupID model.BackupId, params BackupParams) (BackupStatus, error)
+	DeleteBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
+}
+```
+
+A provider that supports backups implements `Backups` and calls `RegisterBackupRoutes`.
 
 ## Wiring
 
@@ -43,7 +51,9 @@ logger := slog.Default()
 
 routes := map[string]func(*gin.RouterGroup){
 	"mysvc": func(g *gin.RouterGroup) {
-		provider.RegisterRoutes(g, mysvc.NewProvider(k8s, logger))
+		p := mysvc.NewProvider(k8s, logger)
+		provider.RegisterRoutes(g, p)       // CRUD
+		provider.RegisterBackupRoutes(g, p) // backups
 	},
 }
 
@@ -51,7 +61,7 @@ server, _ := api.NewServer(cfg, routes)
 server.Run()
 ```
 
-`RegisterRoutes` mounts CRUD and backup endpoints under `/api/v1/{name}`.
+`RegisterRoutes` mounts the CRUD endpoints under `/api/v1/{name}`; `RegisterBackupRoutes` adds the `/backups` endpoints for providers that implement `Backups`.
 
 ## Detached Jobs
 

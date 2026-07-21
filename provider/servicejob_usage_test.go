@@ -135,7 +135,8 @@ var _ = Describe("Dispatching operations with ServiceJob + JobRunner", func() {
 
 		st, err := runner.State(ctx, namespace, provider.BackupJobName("bkp-7"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(provider.BackupStatusFromJob(st).Phase).To(Equal(provider.BackupPhaseRunning))
+		// A still-running backup does not yet exist.
+		Expect(provider.BackupStatusFromJob(st).Exists).To(BeFalse())
 	})
 
 	It("DeleteBackup cleanup: removes the backup job and its owned secret", func() {
