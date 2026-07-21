@@ -5,28 +5,24 @@ package provider
 
 import (
 	"github.com/codesphere-cloud/managed-services-lib/client"
+	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
 // BackupJobName is the name of the Job that takes a backup.
-func BackupJobName(backupID string) string {
-	return ServiceJobName(JobOpBackup, backupID)
+func BackupJobName(backupID model.BackupId) string {
+	return ServiceJobName(JobOpBackup, string(backupID))
 }
 
 // DeleteBackupJobName is the name of the Job that deletes a backup.
-func DeleteBackupJobName(backupID string) string {
-	return ServiceJobName(JobOpDeleteBackup, backupID)
+func DeleteBackupJobName(backupID model.BackupId) string {
+	return ServiceJobName(JobOpDeleteBackup, string(backupID))
 }
 
-// BackupStatusFromJob maps a Job snapshot onto the backup status contract. A Job
-// that no longer exists is reported as pending — a provider that needs to
-// distinguish "never taken" from "completed and garbage-collected" should check
-// the JobState phase directly before calling this.
+// BackupStatusFromJob maps a Job snapshot to the backup status contract.
 func BackupStatusFromJob(s client.JobState) BackupStatus {
-	op := OperationStatusFromJob(s)
-	return BackupStatus{
-		Phase:       BackupPhase(op.Phase),
-		StartedAt:   op.StartedAt,
-		CompletedAt: op.CompletedAt,
-		Error:       op.Error,
+	status := BackupStatus{Exists: s.Phase == client.JobSucceeded}
+	if s.Phase == client.JobFailed {
+		status.Error = s.Reason
 	}
+	return status
 }

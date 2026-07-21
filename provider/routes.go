@@ -86,17 +86,22 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 		}
 		c.Status(http.StatusNoContent)
 	})
+}
 
+// RegisterBackupRoutes mounts backup endpoints.
+func RegisterBackupRoutes[BackupParams any](
+	group *gin.RouterGroup,
+	b Backups[BackupParams],
+) {
 	// PUT /backups/:id - Take a backup
 	group.PUT("/backups/:id", func(c *gin.Context) {
-		var args model.TakeBackupArgs
-		if err := c.ShouldBindJSON(&args); err != nil {
+		var params BackupParams
+		if err := c.ShouldBindJSON(&params); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		args.ID = c.Param("id")
 
-		if err := p.TakeBackup(c.Request.Context(), args); err != nil {
+		if err := b.TakeBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -105,14 +110,13 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// POST /backups/:id/status - Get backup status
 	group.POST("/backups/:id/status", func(c *gin.Context) {
-		var retryArgs model.TakeBackupArgs
-		if err := c.ShouldBindJSON(&retryArgs); err != nil {
+		var params BackupParams
+		if err := c.ShouldBindJSON(&params); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		retryArgs.ID = c.Param("id")
 
-		status, err := p.GetBackupStatus(c.Request.Context(), c.Param("id"), retryArgs)
+		status, err := b.GetBackupStatus(c.Request.Context(), model.BackupId(c.Param("id")), params)
 		if err != nil {
 			HandleError(c, err)
 			return
@@ -122,14 +126,13 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// DELETE /backups/:id - Delete a backup
 	group.DELETE("/backups/:id", func(c *gin.Context) {
-		var args model.TakeBackupArgs
-		if err := c.ShouldBindJSON(&args); err != nil {
+		var params BackupParams
+		if err := c.ShouldBindJSON(&params); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		args.ID = c.Param("id")
 
-		if err := p.DeleteBackup(c.Request.Context(), args); err != nil {
+		if err := b.DeleteBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -137,7 +140,6 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 	})
 }
 
-// ParseCreate binds JSON to the Service domain type.
 func parseCreate[T any](c *gin.Context) (T, error) {
 	var svc T
 	if err := c.ShouldBindJSON(&svc); err != nil {
@@ -146,7 +148,6 @@ func parseCreate[T any](c *gin.Context) (T, error) {
 	return svc, nil
 }
 
-// ParseUpdate binds JSON to the UpdateArgs domain type.
 func parseUpdate[T any](c *gin.Context) (model.ServiceID, T, error) {
 	var args T
 	if err := c.ShouldBindJSON(&args); err != nil {

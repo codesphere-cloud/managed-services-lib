@@ -4,8 +4,6 @@
 package provider_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -34,35 +32,24 @@ var _ = Describe("Backup job helpers", func() {
 	})
 
 	Describe("BackupStatusFromJob", func() {
-		started := time.Date(2026, 7, 17, 10, 0, 0, 0, time.UTC)
-		finished := time.Date(2026, 7, 17, 10, 5, 0, 0, time.UTC)
-
-		It("maps a running job", func() {
-			s := provider.BackupStatusFromJob(client.JobState{Phase: client.JobRunning, StartedAt: &started})
-			Expect(s.Phase).To(Equal(provider.BackupPhaseRunning))
-			Expect(s.StartedAt).To(Equal("2026-07-17T10:00:00Z"))
+		It("reports a succeeded job as existing, with no error", func() {
+			s := provider.BackupStatusFromJob(client.JobState{Phase: client.JobSucceeded})
+			Expect(s.Exists).To(BeTrue())
 			Expect(s.Error).To(BeEmpty())
 		})
 
-		It("maps a succeeded job with timestamps", func() {
-			s := provider.BackupStatusFromJob(client.JobState{
-				Phase: client.JobSucceeded, StartedAt: &started, FinishedAt: &finished,
-			})
-			Expect(s.Phase).To(Equal(provider.BackupPhaseCompleted))
-			Expect(s.CompletedAt).To(Equal("2026-07-17T10:05:00Z"))
-		})
-
-		It("maps a failed job, carrying the reason into Error", func() {
+		It("reports a failed job as not existing, carrying the reason into Error", func() {
 			s := provider.BackupStatusFromJob(client.JobState{Phase: client.JobFailed, Reason: "boom"})
-			Expect(s.Phase).To(Equal(provider.BackupPhaseFailed))
+			Expect(s.Exists).To(BeFalse())
 			Expect(s.Error).To(Equal("boom"))
 		})
 
-		It("maps pending and not-found to pending", func() {
-			Expect(provider.BackupStatusFromJob(client.JobState{Phase: client.JobPending}).Phase).
-				To(Equal(provider.BackupPhasePending))
-			Expect(provider.BackupStatusFromJob(client.JobState{Phase: client.JobNotFound}).Phase).
-				To(Equal(provider.BackupPhasePending))
+		It("reports running, pending and not-found jobs as not existing, no error", func() {
+			for _, phase := range []client.JobPhase{client.JobRunning, client.JobPending, client.JobNotFound} {
+				s := provider.BackupStatusFromJob(client.JobState{Phase: phase})
+				Expect(s.Exists).To(BeFalse())
+				Expect(s.Error).To(BeEmpty())
+			}
 		})
 	})
 })
