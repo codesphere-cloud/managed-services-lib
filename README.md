@@ -53,6 +53,24 @@ server.Run()
 
 `RegisterRoutes` mounts CRUD and backup endpoints under `/api/v1/{name}`.
 
+## Detached Jobs
+
+Some operations (backups, restores, migrations) are easier to run as one-shot Kubernetes Jobs, detached from the provider pod.
+
+- `client.JobRunner` (also on `provider.Base` as `Jobs`) — `Run` / `State` / `Delete` / `Replace` a one-shot Job, with an optional owned credentials Secret injected via `secretKeyRef`.
+- `provider.ServiceJob` / `ServiceJobSpec` — build a `JobSpec` with a consistent name (`<operation>-<key>`) and identity labels; `BackupStatusFromJob` / `OperationStatusFromJob` map a Job's state to a status.
+
+```go
+spec := provider.ServiceJobSpec(provider.ServiceJob{
+	Operation: provider.JobOpBackup, MsID: id, Key: backupID,
+	Image: img, Command: []string{"/backup"},
+	Env: env, Secrets: secrets, // whatever your image reads
+})
+err := p.Jobs.Run(ctx, ns, spec)
+```
+
+See the package docs and `provider/servicejob_usage_test.go` for details.
+
 ## Configuration
 
 `config.Load()` reads these environment variables:
