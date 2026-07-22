@@ -93,6 +93,8 @@ var _ = Describe("JobRunner", func() {
 			Expect(c.Image).To(Equal("job-image:1"))
 			Expect(c.Command).To(Equal([]string{"/app/backup-job"}))
 			Expect(job.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyOnFailure))
+			// No pull secrets requested -> left unset.
+			Expect(job.Spec.Template.Spec.ImagePullSecrets).To(BeNil())
 
 			env := map[string]corev1.EnvVar{}
 			for _, e := range c.Env {
@@ -105,6 +107,24 @@ var _ = Describe("JobRunner", func() {
 
 			Expect(createdSecret.Name).To(Equal("s3-backup-x"))
 			Expect(createdSecret.StringData).To(HaveKeyWithValue("STORE_SECRET_KEY", "sk"))
+		})
+
+		It("sets image pull secrets on the pod when provided", func() {
+			spec.ImagePullSecrets = []string{"regcred", "other"}
+			var createdJob *unstructured.Unstructured
+			created := toUnstructured(&batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: spec.Name}})
+			created.SetUID("job-uid-123")
+
+			kube.On("CreateSecret", mock.Anything, "jobs-ns", mock.Anything).Return(&corev1.Secret{}, nil)
+			kube.On("Create", mock.Anything, model.JobAPI, "jobs-ns", mock.Anything).
+				Run(func(a mock.Arguments) { createdJob = a.Get(3).(*unstructured.Unstructured) }).
+				Return(created, nil)
+			kube.On("Patch", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+			Expect(runner.Run(ctx, "jobs-ns", spec)).To(Succeed())
+
+			Expect(jobFrom(createdJob).Spec.Template.Spec.ImagePullSecrets).
+				To(Equal([]corev1.LocalObjectReference{{Name: "regcred"}, {Name: "other"}}))
 		})
 
 		It("adopts the secret under the created job for garbage collection", func() {

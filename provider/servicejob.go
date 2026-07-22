@@ -60,6 +60,8 @@ type ServiceJob struct {
 	// Labels are merged under the identity labels, which the caller cannot
 	// override.
 	Labels map[string]string
+	// ImagePullSecrets names Secrets used to pull Image from a private registry.
+	ImagePullSecrets []string
 }
 
 // ServiceJobName is the Job naming convention: "<operation>-<key>". It is stable
@@ -84,12 +86,13 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 		labels[keyLabel] = j.Key
 	}
 	return client.JobSpec{
-		Name:    ServiceJobName(j.Operation, j.Key),
-		Image:   j.Image,
-		Command: j.Command,
-		Env:     j.Env,
-		Secrets: j.Secrets,
-		Labels:  labels,
+		Name:             ServiceJobName(j.Operation, j.Key),
+		Image:            j.Image,
+		Command:          j.Command,
+		Env:              j.Env,
+		Secrets:          j.Secrets,
+		Labels:           labels,
+		ImagePullSecrets: j.ImagePullSecrets,
 	}
 }
 

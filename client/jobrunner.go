@@ -92,6 +92,8 @@ type JobSpec struct {
 	// standard service labels so the resources are discoverable and cleaned up
 	// with the service.
 	Labels map[string]string
+	// ImagePullSecrets names Secrets used to pull Image from a private registry.
+	ImagePullSecrets []string
 
 	// Timeout bounds the Job's total run time (activeDeadlineSeconds).
 	// Zero means DefaultJobTimeout.
@@ -288,7 +290,8 @@ func buildJob(spec JobSpec, namespace string) (*unstructured.Unstructured, error
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: spec.Labels},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyOnFailure,
+					RestartPolicy:    corev1.RestartPolicyOnFailure,
+					ImagePullSecrets: imagePullSecrets(spec.ImagePullSecrets),
 					Containers: []corev1.Container{{
 						Name:            jobContainerName,
 						Image:           spec.Image,
@@ -341,6 +344,19 @@ func buildEnv(spec JobSpec) []corev1.EnvVar {
 		})
 	}
 	return out
+}
+
+// imagePullSecrets maps secret names to LocalObjectReferences, returning nil for
+// an empty list so the pod spec stays clean when none are set.
+func imagePullSecrets(names []string) []corev1.LocalObjectReference {
+	if len(names) == 0 {
+		return nil
+	}
+	refs := make([]corev1.LocalObjectReference, len(names))
+	for i, n := range names {
+		refs[i] = corev1.LocalObjectReference{Name: n}
+	}
+	return refs
 }
 
 func sortedKeys(m map[string]string) []string {

@@ -57,6 +57,14 @@ var _ = Describe("Service job core", func() {
 			Expect(spec.Labels).To(HaveKeyWithValue(model.ServiceIDLabel, "svc-42"))
 			Expect(spec.Labels).To(HaveKeyWithValue(model.BackupIDLabel, "bkp-7"))
 		})
+
+		It("passes image pull secrets through", func() {
+			spec := provider.ServiceJobSpec(provider.ServiceJob{
+				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7",
+				ImagePullSecrets: []string{"regcred"},
+			})
+			Expect(spec.ImagePullSecrets).To(Equal([]string{"regcred"}))
+		})
 	})
 
 	Describe("OperationStatusFromJob", func() {

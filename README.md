@@ -75,6 +75,7 @@ spec := provider.ServiceJobSpec(provider.ServiceJob{
 	Operation: provider.JobOpBackup, MsID: id, Key: backupID,
 	Image: img, Command: []string{"/backup"},
 	Env: env, Secrets: secrets, // whatever your image reads
+	ImagePullSecrets: []string{"regcred"}, // for a private registry
 })
 err := p.Jobs.Run(ctx, ns, spec)
 ```
