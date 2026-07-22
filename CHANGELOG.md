@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.4.0...v0.5.0) (2026-07-22)
+
+
+### Features
+
+* add image pull secrets support to service job ([d0cc9da](https://github.com/codesphere-cloud/managed-services-lib/commit/d0cc9da7f1bbfdfd52cb75ae508c220c5056d065))
+
+
+### Bug Fixes
+
+* vulnerability scan findings ([af5e754](https://github.com/codesphere-cloud/managed-services-lib/commit/af5e754c7ba933ded89532d321c6b662752b9a03))
+
 ## [0.4.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.3.1...v0.4.0) (2026-07-21)
 
 
