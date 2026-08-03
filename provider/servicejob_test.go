@@ -8,6 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/codesphere-cloud/managed-services-lib/client"
 	"github.com/codesphere-cloud/managed-services-lib/model"
@@ -64,6 +66,32 @@ var _ = Describe("Service job core", func() {
 				ImagePullSecrets: []string{"regcred"},
 			})
 			Expect(spec.ImagePullSecrets).To(Equal([]string{"regcred"}))
+		})
+
+		It("passes container resources through", func() {
+			res := corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("200m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("512Mi"),
+				},
+			}
+			spec := provider.ServiceJobSpec(provider.ServiceJob{
+				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7",
+				Resources: res,
+			})
+			Expect(spec.Resources).To(Equal(res))
+		})
+
+		It("leaves resources unset if not specified", func() {
+			spec := provider.ServiceJobSpec(provider.ServiceJob{
+				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7",
+			})
+			Expect(spec.Resources.Requests).To(BeEmpty())
+			Expect(spec.Resources.Limits).To(BeEmpty())
 		})
 	})
 

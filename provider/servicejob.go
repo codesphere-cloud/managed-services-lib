@@ -7,6 +7,8 @@ import (
 	"maps"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/codesphere-cloud/managed-services-lib/client"
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
@@ -62,6 +64,8 @@ type ServiceJob struct {
 	Labels map[string]string
 	// ImagePullSecrets names Secrets used to pull Image from a private registry.
 	ImagePullSecrets []string
+	// Resources sets the container's resource requests/limits.
+	Resources corev1.ResourceRequirements
 }
 
 // ServiceJobName is the Job naming convention: "<operation>-<key>". It is stable
@@ -93,6 +97,7 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 		Secrets:          j.Secrets,
 		Labels:           labels,
 		ImagePullSecrets: j.ImagePullSecrets,
+		Resources:        j.Resources,
 	}
 }
 
