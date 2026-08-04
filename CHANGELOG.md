@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.5.0...v0.6.0) (2026-08-04)
+
+
+### Features
+
+* expose container resources on service jobs ([#11](https://github.com/codesphere-cloud/managed-services-lib/issues/11)) ([fbf7c18](https://github.com/codesphere-cloud/managed-services-lib/commit/fbf7c1883cde6d04b5f73338405879f2804571ab))
+
 ## [0.5.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.4.0...v0.5.0) (2026-07-22)
 
 
