@@ -86,13 +86,13 @@ var _ = Describe("JobRunner", func() {
 			job := jobFrom(createdJob)
 			Expect(job.Namespace).To(Equal("jobs-ns"))
 			Expect(*job.Spec.BackoffLimit).To(Equal(int32(3)))
-			Expect(*job.Spec.TTLSecondsAfterFinished).To(Equal(int32(3600)))
+			Expect(*job.Spec.TTLSecondsAfterFinished).To(Equal(int32(1 * 60 * 60)))
 			Expect(*job.Spec.ActiveDeadlineSeconds).To(Equal(int64(6 * 60 * 60)))
 
 			c := job.Spec.Template.Spec.Containers[0]
 			Expect(c.Image).To(Equal("job-image:1"))
 			Expect(c.Command).To(Equal([]string{"/app/backup-job"}))
-			Expect(job.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyOnFailure))
+			Expect(job.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyNever))
 			// No pull secrets requested -> left unset.
 			Expect(job.Spec.Template.Spec.ImagePullSecrets).To(BeNil())
 

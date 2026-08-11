@@ -290,7 +290,10 @@ func buildJob(spec JobSpec, namespace string) (*unstructured.Unstructured, error
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: spec.Labels},
 				Spec: corev1.PodSpec{
-					RestartPolicy:    corev1.RestartPolicyOnFailure,
+					// OnFailure retries the container inside the same pod, and the controller deletes
+					// that pod on BackoffLimitExceeded, so the only copy of the failure logs is gone.
+					// Never gives every attempt its own retained pod.
+					RestartPolicy:    corev1.RestartPolicyNever,
 					ImagePullSecrets: imagePullSecrets(spec.ImagePullSecrets),
 					Containers: []corev1.Container{{
 						Name:            jobContainerName,
