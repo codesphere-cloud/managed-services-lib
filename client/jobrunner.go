@@ -252,7 +252,10 @@ func (r JobRunner) failureReason(ctx context.Context, job batchv1.Job) string {
 	return reason + ": " + logs
 }
 
-// failedPodLogs returns the tail of the logs of a pod belonging to the Job.
+// failedPodLogs returns the tail of the logs of a pod belonging to the Job. With
+// a Never restart policy each attempt gets its own pod, so the newest one is the
+// interesting failure; earlier attempts are tried in turn because the last pod
+// may never have started (e.g. ImagePullBackOff) and have no logs at all.
 // Best-effort: any error yields an empty string.
 func (r JobRunner) failedPodLogs(ctx context.Context, namespace, jobName string) string {
 	pods, err := r.kube.List(ctx, model.ListOptions{
@@ -263,13 +266,20 @@ func (r JobRunner) failedPodLogs(ctx context.Context, namespace, jobName string)
 	if err != nil || pods == nil || len(pods.Items) == 0 {
 		return ""
 	}
-	// The most recently created pod is the one that exhausted the retries.
-	podName := pods.Items[len(pods.Items)-1].GetName()
-	logs, err := r.kube.GetPodLogs(ctx, namespace, podName, jobContainerName, failureLogTailLines)
-	if err != nil {
-		return ""
+	// The API returns items in name order, which for the random pod suffixes says
+	// nothing about attempt order, so sort explicitly.
+	items := pods.Items
+	sort.Slice(items, func(i, j int) bool {
+		ti, tj := items[i].GetCreationTimestamp(), items[j].GetCreationTimestamp()
+		return tj.Before(&ti)
+	})
+	for _, pod := range items {
+		logs, err := r.kube.GetPodLogs(ctx, namespace, pod.GetName(), jobContainerName, failureLogTailLines)
+		if err == nil && logs != "" {
+			return logs
+		}
 	}
-	return logs
+	return ""
 }
 
 func buildJob(spec JobSpec, namespace string) (*unstructured.Unstructured, error) {
