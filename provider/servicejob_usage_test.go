@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/codesphere-cloud/managed-services-lib/client"
 	"github.com/codesphere-cloud/managed-services-lib/client/mocks"
@@ -22,15 +21,12 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/provider"
 )
 
-func runningJob(name, namespace string) *unstructured.Unstructured {
+func runningJob(name, namespace string) *batchv1.Job {
 	start := metav1.Now()
-	m, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&batchv1.Job{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
+	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 		Status:     batchv1.JobStatus{Active: 1, StartTime: &start},
-	})
-	Expect(err).NotTo(HaveOccurred())
-	return &unstructured.Unstructured{Object: m}
+	}
 }
 
 // This suite is a worked example of how a provider dispatches detached work:
@@ -129,9 +125,8 @@ var _ = Describe("Dispatching operations with ServiceJob + JobRunner", func() {
 	})
 
 	It("GetBackupStatus: polls the backup job and maps it to the contract status", func() {
-		kube.On("Get", mock.Anything, mock.MatchedBy(func(r model.ResourceRef) bool {
-			return r.APIResource == model.JobAPI && r.Name == "backup-bkp-7"
-		})).Return(runningJob("backup-bkp-7", namespace), nil)
+		kube.On("GetJob", mock.Anything, namespace, "backup-bkp-7").
+			Return(runningJob("backup-bkp-7", namespace), nil)
 
 		st, err := runner.State(ctx, namespace, provider.BackupJobName("bkp-7"))
 		Expect(err).NotTo(HaveOccurred())

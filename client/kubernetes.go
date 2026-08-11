@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,6 +50,12 @@ type KubernetesClient interface {
 
 	// List lists resources matching the options.
 	List(ctx context.Context, opts model.ListOptions) (*unstructured.UnstructuredList, error)
+
+	// GetJob retrieves a Job as a typed object. Prefer it over Get for Jobs.
+	GetJob(ctx context.Context, namespace, name string) (*batchv1.Job, error)
+
+	// ListPods lists the pods in namespace matching labelSelector, typed.
+	ListPods(ctx context.Context, namespace, labelSelector string) ([]corev1.Pod, error)
 
 	// Patch patches a resource with JSON patches.
 	Patch(ctx context.Context, ref model.ResourceRef, patches []model.K8sPatch) error
@@ -186,6 +193,22 @@ func (c *kubernetesClientImpl) List(ctx context.Context, opts model.ListOptions)
 		return nil, wrapK8sError(err)
 	}
 	return result, nil
+}
+
+func (c *kubernetesClientImpl) GetJob(ctx context.Context, namespace, name string) (*batchv1.Job, error) {
+	result, err := c.clientset.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, wrapK8sError(err)
+	}
+	return result, nil
+}
+
+func (c *kubernetesClientImpl) ListPods(ctx context.Context, namespace, labelSelector string) ([]corev1.Pod, error) {
+	result, err := c.clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return nil, wrapK8sError(err)
+	}
+	return result.Items, nil
 }
 
 func (c *kubernetesClientImpl) Patch(ctx context.Context, ref model.ResourceRef, patches []model.K8sPatch) error {
