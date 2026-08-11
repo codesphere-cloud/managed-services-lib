@@ -257,8 +257,8 @@ func (r JobRunner) failedPodLogs(ctx context.Context, namespace, jobName string)
 	if err != nil {
 		return ""
 	}
-	// The API returns items in name order, which for the random pod suffixes says
-	// nothing about attempt order, so sort explicitly.
+	// Kubernetes does not guarantee list item order, so sort by creation timestamp
+	// to try the newest pod(s) first.
 	sort.Slice(pods, func(i, j int) bool {
 		ti, tj := pods[i].CreationTimestamp, pods[j].CreationTimestamp
 		return tj.Before(&ti)
