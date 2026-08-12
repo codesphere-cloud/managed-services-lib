@@ -5,6 +5,8 @@ package client_test
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,13 +35,22 @@ func jobFrom(u *unstructured.Unstructured) batchv1.Job {
 	return job
 }
 
-// jobWithStatus builds an unstructured Job carrying the given status, as Get would return.
-func jobWithStatus(name, namespace string, status batchv1.JobStatus) *unstructured.Unstructured {
-	return toUnstructured(&batchv1.Job{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "batch/v1", Kind: "Job"},
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+// jobWithStatus builds the Job carrying the given status, as GetJob would return.
+func jobWithStatus(status batchv1.JobStatus) *batchv1.Job {
+	return &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: "s3-backup-x", Namespace: "jobs-ns"},
 		Status:     status,
-	})
+	}
+}
+
+// pod builds a Job pod created age after a fixed reference point, so tests can
+// order attempts independently of the pod names.
+func pod(name string, age time.Duration) corev1.Pod {
+	base := metav1.Date(2026, 8, 11, 12, 0, 0, 0, time.UTC)
+	return corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Name:              name,
+		CreationTimestamp: metav1.NewTime(base.Add(age)),
+	}}
 }
 
 var _ = Describe("JobRunner", func() {
@@ -92,7 +103,7 @@ var _ = Describe("JobRunner", func() {
 			c := job.Spec.Template.Spec.Containers[0]
 			Expect(c.Image).To(Equal("job-image:1"))
 			Expect(c.Command).To(Equal([]string{"/app/backup-job"}))
-			Expect(job.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyOnFailure))
+			Expect(job.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyNever))
 			// No pull secrets requested -> left unset.
 			Expect(job.Spec.Template.Spec.ImagePullSecrets).To(BeNil())
 
@@ -175,7 +186,7 @@ var _ = Describe("JobRunner", func() {
 	Describe("State", func() {
 		It("reports a succeeded job", func() {
 			done := metav1.Now()
-			kube.On("Get", mock.Anything, mock.Anything).Return(jobWithStatus("s3-backup-x", "jobs-ns", batchv1.JobStatus{
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{
 				CompletionTime: &done,
 				Conditions:     []batchv1.JobCondition{{Type: batchv1.JobComplete, Status: corev1.ConditionTrue}},
 			}), nil)
@@ -187,7 +198,7 @@ var _ = Describe("JobRunner", func() {
 		})
 
 		It("reports a running job", func() {
-			kube.On("Get", mock.Anything, mock.Anything).Return(jobWithStatus("s3-backup-x", "jobs-ns", batchv1.JobStatus{
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{
 				Active: 1,
 			}), nil)
 
@@ -197,7 +208,7 @@ var _ = Describe("JobRunner", func() {
 		})
 
 		It("reports a freshly created job as pending", func() {
-			kube.On("Get", mock.Anything, mock.Anything).Return(jobWithStatus("s3-backup-x", "jobs-ns", batchv1.JobStatus{}), nil)
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{}), nil)
 
 			st, err := runner.State(ctx, "jobs-ns", "s3-backup-x")
 			Expect(err).NotTo(HaveOccurred())
@@ -205,15 +216,13 @@ var _ = Describe("JobRunner", func() {
 		})
 
 		It("reports a failed job, enriching the reason with pod logs", func() {
-			kube.On("Get", mock.Anything, mock.Anything).Return(jobWithStatus("s3-backup-x", "jobs-ns", batchv1.JobStatus{
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{
 				Conditions: []batchv1.JobCondition{{
 					Type: batchv1.JobFailed, Status: corev1.ConditionTrue, Message: "BackoffLimitExceeded",
 				}},
 			}), nil)
-			pod := toUnstructured(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "s3-backup-x-abc"}})
-			kube.On("List", mock.Anything, mock.MatchedBy(func(o model.ListOptions) bool {
-				return o.APIResource == model.PodAPI && o.LabelSelector == "job-name=s3-backup-x"
-			})).Return(&unstructured.UnstructuredList{Items: []unstructured.Unstructured{*pod}}, nil)
+			kube.On("ListPods", mock.Anything, "jobs-ns", "job-name=s3-backup-x").
+				Return([]corev1.Pod{pod("s3-backup-x-abc", 0)}, nil)
 			kube.On("GetPodLogs", mock.Anything, "jobs-ns", "s3-backup-x-abc", "job", int64(20)).
 				Return("connection refused", nil)
 
@@ -223,8 +232,47 @@ var _ = Describe("JobRunner", func() {
 			Expect(st.Reason).To(Equal("BackoffLimitExceeded: connection refused"))
 		})
 
+		It("takes the logs of the newest attempt, not the last pod in name order", func() {
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{
+				Conditions: []batchv1.JobCondition{{
+					Type: batchv1.JobFailed, Status: corev1.ConditionTrue, Message: "BackoffLimitExceeded",
+				}},
+			}), nil)
+			kube.On("ListPods", mock.Anything, "jobs-ns", "job-name=s3-backup-x").Return([]corev1.Pod{
+				pod("s3-backup-x-aaa", 3*time.Minute),
+				pod("s3-backup-x-zzz", 1*time.Minute),
+			}, nil)
+
+			kube.On("GetPodLogs", mock.Anything, "jobs-ns", "s3-backup-x-aaa", "job", int64(20)).
+				Return("last attempt: bad credentials", nil)
+
+			st, err := runner.State(ctx, "jobs-ns", "s3-backup-x")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(st.Reason).To(Equal("BackoffLimitExceeded: last attempt: bad credentials"))
+		})
+
+		It("falls back to an earlier attempt when the newest pod has no logs", func() {
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(jobWithStatus(batchv1.JobStatus{
+				Conditions: []batchv1.JobCondition{{
+					Type: batchv1.JobFailed, Status: corev1.ConditionTrue, Message: "BackoffLimitExceeded",
+				}},
+			}), nil)
+			kube.On("ListPods", mock.Anything, "jobs-ns", "job-name=s3-backup-x").Return([]corev1.Pod{
+				pod("s3-backup-x-old", 1*time.Minute),
+				pod("s3-backup-x-new", 3*time.Minute),
+			}, nil)
+			kube.On("GetPodLogs", mock.Anything, "jobs-ns", "s3-backup-x-new", "job", int64(20)).
+				Return("", errors.New("container job is waiting to start: ImagePullBackOff"))
+			kube.On("GetPodLogs", mock.Anything, "jobs-ns", "s3-backup-x-old", "job", int64(20)).
+				Return("connection refused", nil)
+
+			st, err := runner.State(ctx, "jobs-ns", "s3-backup-x")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(st.Reason).To(Equal("BackoffLimitExceeded: connection refused"))
+		})
+
 		It("reports a missing job as not found", func() {
-			kube.On("Get", mock.Anything, mock.Anything).Return(nil, client.ErrResourceNotFound)
+			kube.On("GetJob", mock.Anything, "jobs-ns", "s3-backup-x").Return(nil, client.ErrResourceNotFound)
 
 			st, err := runner.State(ctx, "jobs-ns", "s3-backup-x")
 			Expect(err).NotTo(HaveOccurred())

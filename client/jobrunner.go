@@ -163,17 +163,12 @@ func (r JobRunner) Run(ctx context.Context, namespace string, spec JobSpec) erro
 // exist is reported as JobNotFound with no error. A failed Job's Reason is
 // enriched with the tail of the failed pod's logs when they can be read.
 func (r JobRunner) State(ctx context.Context, namespace, name string) (JobState, error) {
-	obj, err := r.kube.Get(ctx, model.ResourceRef{APIResource: model.JobAPI, Namespace: namespace, Name: name})
+	job, err := r.kube.GetJob(ctx, namespace, name)
 	if err != nil {
 		if errors.Is(err, ErrResourceNotFound) {
 			return JobState{Phase: JobNotFound}, nil
 		}
 		return JobState{}, fmt.Errorf("getting job %s: %w", name, err)
-	}
-
-	var job batchv1.Job
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &job); err != nil {
-		return JobState{}, fmt.Errorf("decoding job %s: %w", name, err)
 	}
 
 	state := JobState{
@@ -240,7 +235,7 @@ func (r JobRunner) adoptSecret(ctx context.Context, namespace, name string, jobU
 // failureReason returns the Job's failure condition message, enriched with the
 // tail of the failed pod's logs when they can be read. The condition alone
 // ("BackoffLimitExceeded") rarely explains what went wrong; the logs do.
-func (r JobRunner) failureReason(ctx context.Context, job batchv1.Job) string {
+func (r JobRunner) failureReason(ctx context.Context, job *batchv1.Job) string {
 	reason := conditionMessage(job, batchv1.JobFailed)
 	logs := r.failedPodLogs(ctx, job.Namespace, job.Name)
 	if logs == "" {
@@ -252,24 +247,29 @@ func (r JobRunner) failureReason(ctx context.Context, job batchv1.Job) string {
 	return reason + ": " + logs
 }
 
-// failedPodLogs returns the tail of the logs of a pod belonging to the Job.
+// failedPodLogs returns the tail of the logs of a pod belonging to the Job. With
+// a Never restart policy each attempt gets its own pod, so the newest one is the
+// interesting failure; earlier attempts are tried in turn because the last pod
+// may never have started (e.g. ImagePullBackOff) and have no logs at all.
 // Best-effort: any error yields an empty string.
 func (r JobRunner) failedPodLogs(ctx context.Context, namespace, jobName string) string {
-	pods, err := r.kube.List(ctx, model.ListOptions{
-		APIResource:   model.PodAPI,
-		Namespace:     namespace,
-		LabelSelector: "job-name=" + jobName,
-	})
-	if err != nil || pods == nil || len(pods.Items) == 0 {
-		return ""
-	}
-	// The most recently created pod is the one that exhausted the retries.
-	podName := pods.Items[len(pods.Items)-1].GetName()
-	logs, err := r.kube.GetPodLogs(ctx, namespace, podName, jobContainerName, failureLogTailLines)
+	pods, err := r.kube.ListPods(ctx, namespace, "job-name="+jobName)
 	if err != nil {
 		return ""
 	}
-	return logs
+	// Kubernetes does not guarantee list item order, so sort by creation timestamp
+	// to try the newest pod(s) first.
+	sort.Slice(pods, func(i, j int) bool {
+		ti, tj := pods[i].CreationTimestamp, pods[j].CreationTimestamp
+		return tj.Before(&ti)
+	})
+	for _, pod := range pods {
+		logs, err := r.kube.GetPodLogs(ctx, namespace, pod.Name, jobContainerName, failureLogTailLines)
+		if err == nil && logs != "" {
+			return logs
+		}
+	}
+	return ""
 }
 
 func buildJob(spec JobSpec, namespace string) (*unstructured.Unstructured, error) {
@@ -290,7 +290,10 @@ func buildJob(spec JobSpec, namespace string) (*unstructured.Unstructured, error
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: spec.Labels},
 				Spec: corev1.PodSpec{
-					RestartPolicy:    corev1.RestartPolicyOnFailure,
+					// OnFailure retries the container inside the same pod, and the controller deletes
+					// that pod on BackoffLimitExceeded, so the only copy of the failure logs is gone.
+					// Never gives every attempt its own retained pod.
+					RestartPolicy:    corev1.RestartPolicyNever,
 					ImagePullSecrets: imagePullSecrets(spec.ImagePullSecrets),
 					Containers: []corev1.Container{{
 						Name:            jobContainerName,
@@ -375,7 +378,7 @@ func durationSeconds(d, fallback time.Duration) int64 {
 	return int64(d.Seconds())
 }
 
-func jobConditionTrue(job batchv1.Job, t batchv1.JobConditionType) bool {
+func jobConditionTrue(job *batchv1.Job, t batchv1.JobConditionType) bool {
 	for _, c := range job.Status.Conditions {
 		if c.Type == t {
 			return c.Status == corev1.ConditionTrue
@@ -384,7 +387,7 @@ func jobConditionTrue(job batchv1.Job, t batchv1.JobConditionType) bool {
 	return false
 }
 
-func conditionMessage(job batchv1.Job, t batchv1.JobConditionType) string {
+func conditionMessage(job *batchv1.Job, t batchv1.JobConditionType) string {
 	for _, c := range job.Status.Conditions {
 		if c.Type != t {
 			continue
@@ -399,7 +402,7 @@ func conditionMessage(job batchv1.Job, t batchv1.JobConditionType) string {
 	return "unknown reason"
 }
 
-func conditionTime(job batchv1.Job, t batchv1.JobConditionType) *time.Time {
+func conditionTime(job *batchv1.Job, t batchv1.JobConditionType) *time.Time {
 	for _, c := range job.Status.Conditions {
 		if c.Type == t && !c.LastTransitionTime.IsZero() {
 			return timePtr(&c.LastTransitionTime)

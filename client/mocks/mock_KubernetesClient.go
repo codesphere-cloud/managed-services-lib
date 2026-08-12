@@ -3,10 +3,13 @@
 package mocks
 
 import (
+	batchv1 "k8s.io/api/batch/v1"
+
 	context "context"
 
-	model "github.com/codesphere-cloud/managed-services-lib/model"
 	mock "github.com/stretchr/testify/mock"
+
+	model "github.com/codesphere-cloud/managed-services-lib/model"
 
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -301,6 +304,66 @@ func (_c *MockKubernetesClient_Get_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// GetJob provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubernetesClient) GetJob(ctx context.Context, namespace string, name string) (*batchv1.Job, error) {
+	ret := _m.Called(ctx, namespace, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetJob")
+	}
+
+	var r0 *batchv1.Job
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*batchv1.Job, error)); ok {
+		return rf(ctx, namespace, name)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *batchv1.Job); ok {
+		r0 = rf(ctx, namespace, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*batchv1.Job)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, namespace, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockKubernetesClient_GetJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetJob'
+type MockKubernetesClient_GetJob_Call struct {
+	*mock.Call
+}
+
+// GetJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - namespace string
+//   - name string
+func (_e *MockKubernetesClient_Expecter) GetJob(ctx interface{}, namespace interface{}, name interface{}) *MockKubernetesClient_GetJob_Call {
+	return &MockKubernetesClient_GetJob_Call{Call: _e.mock.On("GetJob", ctx, namespace, name)}
+}
+
+func (_c *MockKubernetesClient_GetJob_Call) Run(run func(ctx context.Context, namespace string, name string)) *MockKubernetesClient_GetJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockKubernetesClient_GetJob_Call) Return(_a0 *batchv1.Job, _a1 error) *MockKubernetesClient_GetJob_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockKubernetesClient_GetJob_Call) RunAndReturn(run func(context.Context, string, string) (*batchv1.Job, error)) *MockKubernetesClient_GetJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetPodLogs provides a mock function with given fields: ctx, namespace, podName, container, tailLines
 func (_m *MockKubernetesClient) GetPodLogs(ctx context.Context, namespace string, podName string, container string, tailLines int64) (string, error) {
 	ret := _m.Called(ctx, namespace, podName, container, tailLines)
@@ -476,6 +539,66 @@ func (_c *MockKubernetesClient_List_Call) Return(_a0 *unstructured.UnstructuredL
 }
 
 func (_c *MockKubernetesClient_List_Call) RunAndReturn(run func(context.Context, model.ListOptions) (*unstructured.UnstructuredList, error)) *MockKubernetesClient_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPods provides a mock function with given fields: ctx, namespace, labelSelector
+func (_m *MockKubernetesClient) ListPods(ctx context.Context, namespace string, labelSelector string) ([]v1.Pod, error) {
+	ret := _m.Called(ctx, namespace, labelSelector)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPods")
+	}
+
+	var r0 []v1.Pod
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]v1.Pod, error)); ok {
+		return rf(ctx, namespace, labelSelector)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []v1.Pod); ok {
+		r0 = rf(ctx, namespace, labelSelector)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]v1.Pod)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, namespace, labelSelector)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockKubernetesClient_ListPods_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPods'
+type MockKubernetesClient_ListPods_Call struct {
+	*mock.Call
+}
+
+// ListPods is a helper method to define mock.On call
+//   - ctx context.Context
+//   - namespace string
+//   - labelSelector string
+func (_e *MockKubernetesClient_Expecter) ListPods(ctx interface{}, namespace interface{}, labelSelector interface{}) *MockKubernetesClient_ListPods_Call {
+	return &MockKubernetesClient_ListPods_Call{Call: _e.mock.On("ListPods", ctx, namespace, labelSelector)}
+}
+
+func (_c *MockKubernetesClient_ListPods_Call) Run(run func(ctx context.Context, namespace string, labelSelector string)) *MockKubernetesClient_ListPods_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockKubernetesClient_ListPods_Call) Return(_a0 []v1.Pod, _a1 error) *MockKubernetesClient_ListPods_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockKubernetesClient_ListPods_Call) RunAndReturn(run func(context.Context, string, string) ([]v1.Pod, error)) *MockKubernetesClient_ListPods_Call {
 	_c.Call.Return(run)
 	return _c
 }
