@@ -130,7 +130,6 @@ var _ = Describe("Routes", func() {
 		router *gin.Engine
 	)
 
-	// do issues a request against the registered routes.
 	do := func(method, path, body string) *httptest.ResponseRecorder {
 		var req *http.Request
 		if body == "" {
@@ -149,15 +148,11 @@ var _ = Describe("Routes", func() {
 		p = &fakeProvider{}
 		router = gin.New()
 		group := router.Group("/api/v1/fake")
-		// Passing the concrete provider directly also pins the type-inference
-		// behaviour: registration needs no explicit type arguments.
 		provider.RegisterRoutes(group, p)
 		provider.RegisterBackupRoutes(group, p)
 	})
 
 	Describe("POST /", func() {
-		// The payload from the Codesphere REST contract, plus the identity fields
-		// the platform sends alongside id.
 		const body = `{
 			"id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
 			"teamId": 7,
@@ -167,7 +162,7 @@ var _ = Describe("Routes", func() {
 			"secrets": {"password": "super-secret-password"}
 		}`
 
-		It("passes each Codesphere-supplied field as its own argument", func() {
+		It("passes each service-level field as its own argument", func() {
 			w := do(http.MethodPost, "/api/v1/fake", body)
 
 			Expect(w.Code).To(Equal(http.StatusCreated))
@@ -199,7 +194,7 @@ var _ = Describe("Routes", func() {
 	})
 
 	Describe("PATCH /:id", func() {
-		It("takes the ID from the path and decodes identity alongside the partial payload", func() {
+		It("takes the ID from the path and decodes the service fields alongside the partial payload", func() {
 			w := do(http.MethodPatch, "/api/v1/fake/svc-1",
 				`{"teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
@@ -212,7 +207,7 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated[0].Args.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
 		})
 
-		It("leaves sections Codesphere did not send unset", func() {
+		It("leaves sections the request omits unset", func() {
 			do(http.MethodPatch, "/api/v1/fake/svc-1",
 				`{"teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
@@ -235,8 +230,6 @@ var _ = Describe("Routes", func() {
 				fakeDetails{Ready: true},
 			)
 
-			// The wrapper type is unexported, but its fields are readable, so a
-			// provider can inspect a status it built without owning the envelope.
 			Expect(status.Plan.Parameters).To(Equal(fakeParams{Storage: 1000}))
 		})
 

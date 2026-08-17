@@ -13,21 +13,18 @@ import (
 // Each provider (e.g., Postgres, FerretDB) implements this interface
 // to handle its specific lifecycle operations.
 //
-// Whatever Codesphere sends or structures is an explicit parameter; the type
+// Whatever the REST contract defines is an explicit parameter; the type
 // parameters are the provider's own schemas. Providers therefore never declare
-// the id/teamId/customSubdomain fields or the plan.parameters wrapper themselves.
+// the id/teamId/customSubdomain fields or the plan.parameters wrapper themselves —
+// the library decodes them off the request and passes them in.
 //
 // Generic parameters, each the contents of one provider-defined section of the
-// REST contract:
+// contract:
 //   - PlanParams: plan.parameters
 //   - Config: config
 //   - Secrets: secrets
 //   - Details: details, the read-only part of the status response
 //   - UpdateParams: the provider's partial PATCH payload
-//
-// Providers are expected to alias the instantiation once:
-//
-//	type MyProvider = provider.Provider[Params, Config, Secrets, Details, UpdateParams]
 type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
 	// Create creates a new managed service.
 	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,

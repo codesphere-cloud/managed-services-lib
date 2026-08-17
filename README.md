@@ -30,10 +30,10 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 }
 ```
 
-The split between the platform and your provider is visible in the signatures — you never declare
-the Codesphere-supplied fields or the contract's envelopes yourself:
+The split between the contract and your provider is visible in the signatures — you never declare
+the contract's own fields or envelopes yourself:
 
-| Codesphere provides | You define |
+| The contract defines | You define |
 |---|---|
 | `id`, `teamId`, `customSubdomain` — passed as arguments | `PlanParams` — contents of `plan.parameters` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Config` — contents of `config` |
@@ -42,13 +42,7 @@ the Codesphere-supplied fields or the contract's envelopes yourself:
 | HTTP status codes and error mapping | `UpdateParams` — your partial `PATCH` payload |
 
 `PATCH` bodies are partial, so make `UpdateParams` fields pointers to tell "not sent" from "sent
-empty". Alias the instantiation once so the five type parameters stay out of your way:
-
-```go
-type MyProvider = provider.Provider[Params, Config, Secrets, Details, UpdateParams]
-```
-
-Build status values with `provider.NewServiceStatus(plan, config, details)`. Embed
+empty". Build status values with `provider.NewServiceStatus(plan, config, details)`. Embed
 `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
 
 Backups are an **opt-in capability**, generic over the provider's own backup-store schemas:

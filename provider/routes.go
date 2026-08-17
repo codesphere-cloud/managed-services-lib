@@ -14,23 +14,24 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
-// planSpec is the {"parameters": ...} envelope Codesphere wraps a plan in.
+// planSpec is the {"parameters": ...} envelope the contract wraps a plan in.
 type planSpec[Params any] struct {
 	Parameters Params `json:"parameters"`
 }
 
-// codesphereFields are the service fields Codesphere sends with create and
-// update payloads. On update the ID comes from the path instead.
-type codesphereFields struct {
+// serviceFields are the service-level fields the contract defines on create and
+// update payloads, as opposed to the provider's own sections. On update the ID
+// comes from the path instead.
+type serviceFields struct {
 	ID              model.ServiceID `json:"id"`
 	TeamID          int             `json:"teamId"`
 	CustomSubdomain *string         `json:"customSubdomain"`
 }
 
-// createBody is the create payload: the Codesphere fields plus the provider's
-// own sections.
+// createBody is the create payload: the service fields plus the provider's own
+// sections.
 type createBody[PlanParams, Config, Secrets any] struct {
-	codesphereFields
+	serviceFields
 	Plan    planSpec[PlanParams] `json:"plan"`
 	Config  Config               `json:"config"`
 	Secrets Secrets              `json:"secrets"`
@@ -94,10 +95,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 
 	// PATCH /:id - Update an existing service
 	group.PATCH("/:id", func(c *gin.Context) {
-		// Two passes over the same body: the Codesphere fields and the provider's
-		// partial payload are siblings in one JSON object, and a type parameter
-		// cannot be embedded. ShouldBindBodyWithJSON caches the raw body.
-		var fields codesphereFields
+		var fields serviceFields
 		if err := c.ShouldBindBodyWithJSON(&fields); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
