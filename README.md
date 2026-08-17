@@ -19,24 +19,48 @@ Go 1.26+.
 ## Provider interface
 
 ```go
-type Provider[CreateParams any, Status any, UpdateParams any] interface {
-	Create(ctx context.Context, params CreateParams) error
+type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
+	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+		plan PlanParams, config Config, secrets Secrets) error
 	List(ctx context.Context) ([]model.ServiceID, error)
-	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]Status, error)
-	Update(ctx context.Context, id model.ServiceID, args UpdateParams) error
+	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]ServiceStatus[PlanParams, Config, Details], error)
+	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+		args UpdateParams) error
 	Delete(ctx context.Context, id model.ServiceID) error
 }
 ```
 
-Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
+The split between the platform and your provider is visible in the signatures — you never declare
+the Codesphere-supplied fields or the contract's envelopes yourself:
 
-Backups are an **opt-in capability**, generic over the provider's own request type:
+| Codesphere provides | You define |
+|---|---|
+| `id`, `teamId`, `customSubdomain` — passed as arguments | `PlanParams` — contents of `plan.parameters` |
+| the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Config` — contents of `config` |
+| `msId` on backup requests | `Secrets` — contents of `secrets` |
+| the `{plan, config, details}` status envelope (`ServiceStatus`) | `Details` — read-only status data (hostnames, ports, readiness) |
+| HTTP status codes and error mapping | `UpdateParams` — your partial `PATCH` payload |
+
+`PATCH` bodies are partial, so make `UpdateParams` fields pointers to tell "not sent" from "sent
+empty". Alias the instantiation once so the five type parameters stay out of your way:
 
 ```go
-type Backups[BackupParams any] interface {
-	TakeBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
-	GetBackupStatus(ctx context.Context, backupID model.BackupId, params BackupParams) (BackupStatus, error)
-	DeleteBackup(ctx context.Context, backupID model.BackupId, params BackupParams) error
+type MyProvider = provider.Provider[Params, Config, Secrets, Details, UpdateParams]
+```
+
+Build status values with `provider.NewServiceStatus(plan, config, details)`. Embed
+`provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
+
+Backups are an **opt-in capability**, generic over the provider's own backup-store schemas:
+
+```go
+type Backups[BackupConfig, BackupSecrets any] interface {
+	TakeBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
+		config BackupConfig, secrets BackupSecrets) error
+	GetBackupStatus(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
+		config BackupConfig, secrets BackupSecrets) (BackupStatus, error)
+	DeleteBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
+		config BackupConfig, secrets BackupSecrets) error
 }
 ```
 

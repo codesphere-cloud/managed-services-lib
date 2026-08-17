@@ -14,10 +14,39 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
+// planSpec is the {"parameters": ...} envelope Codesphere wraps a plan in.
+type planSpec[Params any] struct {
+	Parameters Params `json:"parameters"`
+}
+
+// codesphereFields are the service fields Codesphere sends with create and
+// update payloads. On update the ID comes from the path instead.
+type codesphereFields struct {
+	ID              model.ServiceID `json:"id"`
+	TeamID          int             `json:"teamId"`
+	CustomSubdomain string          `json:"customSubdomain"`
+}
+
+// createBody is the create payload: the Codesphere fields plus the provider's
+// own sections.
+type createBody[PlanParams, Config, Secrets any] struct {
+	codesphereFields
+	Plan    planSpec[PlanParams] `json:"plan"`
+	Config  Config               `json:"config"`
+	Secrets Secrets              `json:"secrets"`
+}
+
+// backupBody is the backup payload; the backup ID comes from the path.
+type backupBody[Config, Secrets any] struct {
+	MsID    model.ServiceID `json:"msId"`
+	Config  Config          `json:"config"`
+	Secrets Secrets         `json:"secrets"`
+}
+
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.
-func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
+func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 	group *gin.RouterGroup,
-	p Provider[CreateParams, Status, UpdateParams],
+	p Provider[PlanParams, Config, Secrets, Details, UpdateParams],
 ) {
 	// GET / - List all service IDs or get detailed status
 	group.GET("", func(c *gin.Context) {
@@ -49,13 +78,14 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// POST / - Create a new service
 	group.POST("", func(c *gin.Context) {
-		params, err := parseCreate[CreateParams](c)
-		if err != nil {
+		var body createBody[PlanParams, Config, Secrets]
+		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := p.Create(c.Request.Context(), params); err != nil {
+		if err := p.Create(c.Request.Context(), body.ID, body.TeamID, body.CustomSubdomain,
+			body.Plan.Parameters, body.Config, body.Secrets); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -64,13 +94,24 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// PATCH /:id - Update an existing service
 	group.PATCH("/:id", func(c *gin.Context) {
-		id, args, err := parseUpdate[UpdateParams](c)
-		if err != nil {
+		// Two passes over the same body: the Codesphere fields and the provider's
+		// partial payload are siblings in one JSON object, and a type parameter
+		// cannot be embedded. ShouldBindBodyWithJSON caches the raw body.
+		var fields codesphereFields
+		if err := c.ShouldBindBodyWithJSON(&fields); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := p.Update(c.Request.Context(), id, args); err != nil {
+		var args UpdateParams
+		if err := c.ShouldBindBodyWithJSON(&args); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		id := model.ServiceID(c.Param("id"))
+		if err := p.Update(c.Request.Context(), id, fields.TeamID, fields.CustomSubdomain,
+			args); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -89,19 +130,19 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 }
 
 // RegisterBackupRoutes mounts backup endpoints.
-func RegisterBackupRoutes[BackupParams any](
+func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 	group *gin.RouterGroup,
-	b Backups[BackupParams],
+	b Backups[BackupConfig, BackupSecrets],
 ) {
 	// PUT /backups/:id - Take a backup
 	group.PUT("/backups/:id", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.TakeBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
+		if err := b.TakeBackup(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -110,13 +151,13 @@ func RegisterBackupRoutes[BackupParams any](
 
 	// POST /backups/:id/status - Get backup status
 	group.POST("/backups/:id/status", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		status, err := b.GetBackupStatus(c.Request.Context(), model.BackupId(c.Param("id")), params)
+		status, err := b.GetBackupStatus(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets)
 		if err != nil {
 			HandleError(c, err)
 			return
@@ -126,13 +167,13 @@ func RegisterBackupRoutes[BackupParams any](
 
 	// DELETE /backups/:id - Delete a backup
 	group.DELETE("/backups/:id", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.DeleteBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
+		if err := b.DeleteBackup(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -140,20 +181,13 @@ func RegisterBackupRoutes[BackupParams any](
 	})
 }
 
-func parseCreate[T any](c *gin.Context) (T, error) {
-	var svc T
-	if err := c.ShouldBindJSON(&svc); err != nil {
-		return svc, err
+// parseBackup decodes a backup payload and pairs it with the backup ID from the path.
+func parseBackup[Config, Secrets any](c *gin.Context) (model.BackupId, backupBody[Config, Secrets], error) {
+	var body backupBody[Config, Secrets]
+	if err := c.ShouldBindJSON(&body); err != nil {
+		return "", body, err
 	}
-	return svc, nil
-}
-
-func parseUpdate[T any](c *gin.Context) (model.ServiceID, T, error) {
-	var args T
-	if err := c.ShouldBindJSON(&args); err != nil {
-		return "", args, err
-	}
-	return model.ServiceID(c.Param("id")), args, nil
+	return model.BackupId(c.Param("id")), body, nil
 }
 
 // HandleError handles provider errors and returns appropriate HTTP responses.
