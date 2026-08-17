@@ -20,11 +20,11 @@ Go 1.26+.
 
 ```go
 type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
-	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 		plan PlanParams, config Config, secrets Secrets) error
 	List(ctx context.Context) ([]model.ServiceID, error)
 	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]ServiceStatus[PlanParams, Config, Details], error)
-	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 		args UpdateParams) error
 	Delete(ctx context.Context, id model.ServiceID) error
 }

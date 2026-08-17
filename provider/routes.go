@@ -24,7 +24,7 @@ type planSpec[Params any] struct {
 type codesphereFields struct {
 	ID              model.ServiceID `json:"id"`
 	TeamID          int             `json:"teamId"`
-	CustomSubdomain string          `json:"customSubdomain"`
+	CustomSubdomain *string         `json:"customSubdomain"`
 }
 
 // createBody is the create payload: the Codesphere fields plus the provider's

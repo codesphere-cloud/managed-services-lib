@@ -55,7 +55,7 @@ type (
 type createCall struct {
 	ID              model.ServiceID
 	TeamID          int
-	CustomSubdomain string
+	CustomSubdomain *string
 	Plan            fakeParams
 	Config          fakeConfig
 	Secrets         fakeSecrets
@@ -64,7 +64,7 @@ type createCall struct {
 type updateCall struct {
 	ID              model.ServiceID
 	TeamID          int
-	CustomSubdomain string
+	CustomSubdomain *string
 	Args            fakeUpdate
 }
 
@@ -83,7 +83,7 @@ type fakeProvider struct {
 	status   map[model.ServiceID]provider.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
 }
 
-func (f *fakeProvider) Create(_ context.Context, id model.ServiceID, teamID int, customSubdomain string,
+func (f *fakeProvider) Create(_ context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 	plan fakeParams, config fakeConfig, secrets fakeSecrets) error {
 	f.created = append(f.created, createCall{id, teamID, customSubdomain, plan, config, secrets})
 	return nil
@@ -97,7 +97,7 @@ func (f *fakeProvider) GetStatus(_ context.Context, _ []model.ServiceID) (map[mo
 	return f.status, nil
 }
 
-func (f *fakeProvider) Update(_ context.Context, id model.ServiceID, teamID int, customSubdomain string,
+func (f *fakeProvider) Update(_ context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 	args fakeUpdate) error {
 	f.updated = append(f.updated, updateCall{id, teamID, customSubdomain, args})
 	return nil
@@ -174,7 +174,7 @@ var _ = Describe("Routes", func() {
 			Expect(p.created).To(HaveLen(1))
 			Expect(p.created[0].ID).To(Equal(model.ServiceID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")))
 			Expect(p.created[0].TeamID).To(Equal(7))
-			Expect(p.created[0].CustomSubdomain).To(Equal("my-db"))
+			Expect(p.created[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
 		})
 
 		It("unwraps plan.parameters into the provider's params type", func() {
@@ -207,7 +207,7 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated).To(HaveLen(1))
 			Expect(p.updated[0].ID).To(Equal(model.ServiceID("svc-1")))
 			Expect(p.updated[0].TeamID).To(Equal(7))
-			Expect(p.updated[0].CustomSubdomain).To(Equal("my-db"))
+			Expect(p.updated[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
 			Expect(p.updated[0].Args.Plan).NotTo(BeNil())
 			Expect(p.updated[0].Args.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
 		})

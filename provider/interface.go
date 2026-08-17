@@ -30,7 +30,7 @@ import (
 //	type MyProvider = provider.Provider[Params, Config, Secrets, Details, UpdateParams]
 type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
 	// Create creates a new managed service.
-	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 		plan PlanParams, config Config, secrets Secrets) error
 
 	// List returns all service IDs managed by this provider.
@@ -42,7 +42,7 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 
 	// Update updates an existing managed service. args holds whichever of the
 	// provider's own fields changed.
-	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain string,
+	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
 		args UpdateParams) error
 
 	// Delete deletes a managed service.
