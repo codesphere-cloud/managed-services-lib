@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.7.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.6.0...v0.7.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* explicit provider contract ([#15](https://github.com/codesphere-cloud/managed-services-lib/issues/15))
+
+### refac
+
+* explicit provider contract ([#15](https://github.com/codesphere-cloud/managed-services-lib/issues/15)) ([31fe171](https://github.com/codesphere-cloud/managed-services-lib/commit/31fe17195dc7f33b4266681ff50dd2a4518b64ad))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/onsi/ginkgo/v2 to v2.32.1 ([#20](https://github.com/codesphere-cloud/managed-services-lib/issues/20)) ([ebdaaa2](https://github.com/codesphere-cloud/managed-services-lib/commit/ebdaaa22241a86448de0591736f39680e57e0582))
+* **deps:** update module github.com/stretchr/testify to v1.12.1 ([#25](https://github.com/codesphere-cloud/managed-services-lib/issues/25)) ([632d92b](https://github.com/codesphere-cloud/managed-services-lib/commit/632d92bea38208654855639b76f60ea2bc15d9ed))
+* retry jobs in separate pods to retain logs ([#13](https://github.com/codesphere-cloud/managed-services-lib/issues/13)) ([4bc7bc4](https://github.com/codesphere-cloud/managed-services-lib/commit/4bc7bc40864daaa6187adc05120ed64a9c72b792))
+
 ## [0.6.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.5.0...v0.6.0) (2026-08-04)
 
 
