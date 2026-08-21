@@ -14,10 +14,38 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
+// serviceFields are the service-level fields the contract defines on create and
+// update payloads, as opposed to the provider's own sections. On update the ID
+// comes from the path instead.
+type serviceFields struct {
+	ID              model.ServiceID `json:"id"`
+	TeamID          int             `json:"teamId"`
+	CustomSubdomain *string         `json:"customSubdomain"`
+}
+
+// createBody is the create payload: the service fields plus the provider's own
+// sections.
+type createBody[PlanParams, Config, Secrets any] struct {
+	serviceFields
+	Plan        model.PlanSpec[PlanParams] `json:"plan"`
+	Config      Config                     `json:"config"`
+	Secrets     Secrets                    `json:"secrets"`
+	RecoverFrom *model.RecoverFrom         `json:"recoverFrom,omitempty"`
+}
+
+// backupBody is the backup payload; the backup ID comes from the path.
+type backupBody[Config, Secrets any] struct {
+	MsID          model.ServiceID `json:"msId"`
+	TeamID        int             `json:"teamId"`
+	Config        Config          `json:"config"`
+	Secrets       Secrets         `json:"secrets"`
+	RetentionDays *int            `json:"retentionDays,omitempty"`
+}
+
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.
-func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
+func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 	group *gin.RouterGroup,
-	p Provider[CreateParams, Status, UpdateParams],
+	p Provider[PlanParams, Config, Secrets, Details, UpdateParams],
 ) {
 	// GET / - List all service IDs or get detailed status
 	group.GET("", func(c *gin.Context) {
@@ -49,13 +77,23 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// POST / - Create a new service
 	group.POST("", func(c *gin.Context) {
-		params, err := parseCreate[CreateParams](c)
-		if err != nil {
+		var body createBody[PlanParams, Config, Secrets]
+		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := p.Create(c.Request.Context(), params); err != nil {
+		if body.ID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+			return
+		}
+		if body.TeamID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "teamId must be a positive integer"})
+			return
+		}
+
+		if err := p.Create(c.Request.Context(), body.ID, body.TeamID, body.CustomSubdomain,
+			body.Plan.Parameters, body.Config, body.Secrets, body.RecoverFrom); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -64,13 +102,25 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 
 	// PATCH /:id - Update an existing service
 	group.PATCH("/:id", func(c *gin.Context) {
-		id, args, err := parseUpdate[UpdateParams](c)
-		if err != nil {
+		var fields serviceFields
+		if err := c.ShouldBindBodyWithJSON(&fields); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := p.Update(c.Request.Context(), id, args); err != nil {
+		var args UpdateParams
+		if err := c.ShouldBindBodyWithJSON(&args); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		id := model.ServiceID(c.Param("id"))
+		if fields.ID != id {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id in body must match path"})
+			return
+		}
+		if err := p.Update(c.Request.Context(), id, fields.TeamID, fields.CustomSubdomain,
+			args); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -89,19 +139,20 @@ func RegisterRoutes[CreateParams any, Status any, UpdateParams any](
 }
 
 // RegisterBackupRoutes mounts backup endpoints.
-func RegisterBackupRoutes[BackupParams any](
+func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 	group *gin.RouterGroup,
-	b Backups[BackupParams],
+	b Backups[BackupConfig, BackupSecrets],
 ) {
 	// PUT /backups/:id - Take a backup
 	group.PUT("/backups/:id", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.TakeBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
+		if err := b.TakeBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -110,13 +161,14 @@ func RegisterBackupRoutes[BackupParams any](
 
 	// POST /backups/:id/status - Get backup status
 	group.POST("/backups/:id/status", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		status, err := b.GetBackupStatus(c.Request.Context(), model.BackupId(c.Param("id")), params)
+		status, err := b.GetBackupStatus(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays)
 		if err != nil {
 			HandleError(c, err)
 			return
@@ -126,13 +178,14 @@ func RegisterBackupRoutes[BackupParams any](
 
 	// DELETE /backups/:id - Delete a backup
 	group.DELETE("/backups/:id", func(c *gin.Context) {
-		var params BackupParams
-		if err := c.ShouldBindJSON(&params); err != nil {
+		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.DeleteBackup(c.Request.Context(), model.BackupId(c.Param("id")), params); err != nil {
+		if err := b.DeleteBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -140,20 +193,18 @@ func RegisterBackupRoutes[BackupParams any](
 	})
 }
 
-func parseCreate[T any](c *gin.Context) (T, error) {
-	var svc T
-	if err := c.ShouldBindJSON(&svc); err != nil {
-		return svc, err
+func parseBackup[Config, Secrets any](c *gin.Context) (model.BackupId, backupBody[Config, Secrets], error) {
+	var body backupBody[Config, Secrets]
+	if err := c.ShouldBindJSON(&body); err != nil {
+		return "", body, err
 	}
-	return svc, nil
-}
-
-func parseUpdate[T any](c *gin.Context) (model.ServiceID, T, error) {
-	var args T
-	if err := c.ShouldBindJSON(&args); err != nil {
-		return "", args, err
+	if body.MsID == "" {
+		return "", body, errors.New("msId is required")
 	}
-	return model.ServiceID(c.Param("id")), args, nil
+	if body.TeamID <= 0 {
+		return "", body, errors.New("teamId must be a positive integer")
+	}
+	return model.BackupId(c.Param("id")), body, nil
 }
 
 // HandleError handles provider errors and returns appropriate HTTP responses.
