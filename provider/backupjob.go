@@ -19,8 +19,8 @@ func DeleteBackupJobName(backupID model.BackupId) string {
 }
 
 // BackupStatusFromJob maps a Job snapshot to the backup status contract.
-func BackupStatusFromJob(s client.JobState) BackupStatus {
-	status := BackupStatus{Exists: s.Phase == client.JobSucceeded}
+func BackupStatusFromJob(s client.JobState) model.BackupStatus {
+	status := model.BackupStatus{Exists: s.Phase == client.JobSucceeded}
 	if s.Phase == client.JobFailed {
 		status.Error = s.Reason
 	}

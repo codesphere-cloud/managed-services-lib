@@ -27,15 +27,16 @@ import (
 //   - UpdateParams: the provider's partial PATCH payload
 type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
 	// Create creates a new managed service.
+	// recoverFrom is set when the request asks to restore the new service from a backup.
 	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-		plan PlanParams, config Config, secrets Secrets) error
+		plan PlanParams, config Config, secrets Secrets, recoverFrom *model.RecoverFrom) error
 
 	// List returns all service IDs managed by this provider.
 	List(ctx context.Context) ([]model.ServiceID, error)
 
 	// GetStatus returns the status of the specified services.
 	// Services that don't exist are simply omitted from the result map.
-	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]ServiceStatus[PlanParams, Config, Details], error)
+	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]model.ServiceStatus[PlanParams, Config, Details], error)
 
 	// Update updates an existing managed service. args holds whichever of the
 	// provider's own fields changed.
@@ -46,28 +47,15 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 	Delete(ctx context.Context, id model.ServiceID) error
 }
 
-// ServiceStatus is the per-service value of the status response. Build it with
-// NewServiceStatus, which applies the contract's plan.parameters wrapper.
-type ServiceStatus[PlanParams, Config, Details any] struct {
-	// Plan echoes the service's current plan parameters.
-	Plan planSpec[PlanParams] `json:"plan"`
-
-	// Config echoes the service's current configuration.
-	Config Config `json:"config"`
-
-	// Details is read-only provider data (hostnames, ports, readiness, ...).
-	Details Details `json:"details"`
-}
-
 // NewServiceStatus assembles a ServiceStatus, wrapping plan in the contract's
 // plan.parameters envelope.
 func NewServiceStatus[PlanParams, Config, Details any](
 	plan PlanParams,
 	config Config,
 	details Details,
-) ServiceStatus[PlanParams, Config, Details] {
-	return ServiceStatus[PlanParams, Config, Details]{
-		Plan:    planSpec[PlanParams]{Parameters: plan},
+) model.ServiceStatus[PlanParams, Config, Details] {
+	return model.ServiceStatus[PlanParams, Config, Details]{
+		Plan:    model.PlanSpec[PlanParams]{Parameters: plan},
 		Config:  config,
 		Details: details,
 	}
@@ -75,27 +63,18 @@ func NewServiceStatus[PlanParams, Config, Details any](
 
 // Backups is the optional backup capability, kept separate from Provider so a
 // provider opts in by implementing it. The type parameters are the provider's own
-// backup-store schemas.
+// backup-store schemas. retentionDays is nil when the request left retention
+// unmanaged.
 type Backups[BackupConfig, BackupSecrets any] interface {
 	// TakeBackup initiates a backup of the managed service.
-	TakeBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) error
+	TakeBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID, teamID int,
+		config BackupConfig, secrets BackupSecrets, retentionDays *int) error
 
 	// GetBackupStatus returns the status of a backup.
-	GetBackupStatus(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) (BackupStatus, error)
+	GetBackupStatus(ctx context.Context, backupID model.BackupId, msID model.ServiceID, teamID int,
+		config BackupConfig, secrets BackupSecrets, retentionDays *int) (model.BackupStatus, error)
 
 	// DeleteBackup deletes a backup.
-	DeleteBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) error
-}
-
-// BackupStatus is the backup-status response contract expected by Codesphere:
-// whether the backup exists (was taken successfully) and, if it failed, why.
-type BackupStatus struct {
-	// Exists is true once the backup has been taken successfully.
-	Exists bool `json:"exists"`
-
-	// Error contains the failure reason when the backup failed; empty otherwise.
-	Error string `json:"error,omitempty"`
+	DeleteBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID, teamID int,
+		config BackupConfig, secrets BackupSecrets, retentionDays *int) error
 }

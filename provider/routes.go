@@ -14,11 +14,6 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
-// planSpec is the {"parameters": ...} envelope the contract wraps a plan in.
-type planSpec[Params any] struct {
-	Parameters Params `json:"parameters"`
-}
-
 // serviceFields are the service-level fields the contract defines on create and
 // update payloads, as opposed to the provider's own sections. On update the ID
 // comes from the path instead.
@@ -32,16 +27,19 @@ type serviceFields struct {
 // sections.
 type createBody[PlanParams, Config, Secrets any] struct {
 	serviceFields
-	Plan    planSpec[PlanParams] `json:"plan"`
-	Config  Config               `json:"config"`
-	Secrets Secrets              `json:"secrets"`
+	Plan        model.PlanSpec[PlanParams] `json:"plan"`
+	Config      Config                     `json:"config"`
+	Secrets     Secrets                    `json:"secrets"`
+	RecoverFrom *model.RecoverFrom         `json:"recoverFrom,omitempty"`
 }
 
 // backupBody is the backup payload; the backup ID comes from the path.
 type backupBody[Config, Secrets any] struct {
-	MsID    model.ServiceID `json:"msId"`
-	Config  Config          `json:"config"`
-	Secrets Secrets         `json:"secrets"`
+	MsID          model.ServiceID `json:"msId"`
+	TeamID        int             `json:"teamId"`
+	Config        Config          `json:"config"`
+	Secrets       Secrets         `json:"secrets"`
+	RetentionDays *int            `json:"retentionDays,omitempty"`
 }
 
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.
@@ -95,7 +93,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 		}
 
 		if err := p.Create(c.Request.Context(), body.ID, body.TeamID, body.CustomSubdomain,
-			body.Plan.Parameters, body.Config, body.Secrets); err != nil {
+			body.Plan.Parameters, body.Config, body.Secrets, body.RecoverFrom); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -153,7 +151,8 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 			return
 		}
 
-		if err := b.TakeBackup(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets); err != nil {
+		if err := b.TakeBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -168,7 +167,8 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 			return
 		}
 
-		status, err := b.GetBackupStatus(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets)
+		status, err := b.GetBackupStatus(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays)
 		if err != nil {
 			HandleError(c, err)
 			return
@@ -184,7 +184,8 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 			return
 		}
 
-		if err := b.DeleteBackup(c.Request.Context(), backupID, body.MsID, body.Config, body.Secrets); err != nil {
+		if err := b.DeleteBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
+			body.Config, body.Secrets, body.RetentionDays); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -199,6 +200,9 @@ func parseBackup[Config, Secrets any](c *gin.Context) (model.BackupId, backupBod
 	}
 	if body.MsID == "" {
 		return "", body, errors.New("msId is required")
+	}
+	if body.TeamID <= 0 {
+		return "", body, errors.New("teamId must be a positive integer")
 	}
 	return model.BackupId(c.Param("id")), body, nil
 }

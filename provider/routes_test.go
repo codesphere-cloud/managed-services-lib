@@ -59,6 +59,7 @@ type createCall struct {
 	Plan            fakeParams
 	Config          fakeConfig
 	Secrets         fakeSecrets
+	RecoverFrom     *model.RecoverFrom
 }
 
 type updateCall struct {
@@ -69,10 +70,12 @@ type updateCall struct {
 }
 
 type backupCall struct {
-	BackupID model.BackupId
-	MsID     model.ServiceID
-	Config   fakeBackupConfig
-	Secrets  fakeBackupSecrets
+	BackupID      model.BackupId
+	MsID          model.ServiceID
+	TeamID        int
+	Config        fakeBackupConfig
+	Secrets       fakeBackupSecrets
+	RetentionDays *int
 }
 
 type fakeProvider struct {
@@ -80,12 +83,12 @@ type fakeProvider struct {
 	updated  []updateCall
 	deleted  []model.ServiceID
 	backedUp []backupCall
-	status   map[model.ServiceID]provider.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
+	status   map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
 }
 
 func (f *fakeProvider) Create(_ context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-	plan fakeParams, config fakeConfig, secrets fakeSecrets) error {
-	f.created = append(f.created, createCall{id, teamID, customSubdomain, plan, config, secrets})
+	plan fakeParams, config fakeConfig, secrets fakeSecrets, recoverFrom *model.RecoverFrom) error {
+	f.created = append(f.created, createCall{id, teamID, customSubdomain, plan, config, secrets, recoverFrom})
 	return nil
 }
 
@@ -93,7 +96,7 @@ func (f *fakeProvider) List(_ context.Context) ([]model.ServiceID, error) {
 	return []model.ServiceID{"svc-1", "svc-2"}, nil
 }
 
-func (f *fakeProvider) GetStatus(_ context.Context, _ []model.ServiceID) (map[model.ServiceID]provider.ServiceStatus[fakeParams, fakeConfig, fakeDetails], error) {
+func (f *fakeProvider) GetStatus(_ context.Context, _ []model.ServiceID) (map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails], error) {
 	return f.status, nil
 }
 
@@ -108,19 +111,19 @@ func (f *fakeProvider) Delete(_ context.Context, id model.ServiceID) error {
 	return nil
 }
 
-func (f *fakeProvider) TakeBackup(_ context.Context, backupID model.BackupId, msID model.ServiceID,
-	config fakeBackupConfig, secrets fakeBackupSecrets) error {
-	f.backedUp = append(f.backedUp, backupCall{backupID, msID, config, secrets})
+func (f *fakeProvider) TakeBackup(_ context.Context, backupID model.BackupId, msID model.ServiceID, teamID int,
+	config fakeBackupConfig, secrets fakeBackupSecrets, retentionDays *int) error {
+	f.backedUp = append(f.backedUp, backupCall{backupID, msID, teamID, config, secrets, retentionDays})
 	return nil
 }
 
-func (f *fakeProvider) GetBackupStatus(_ context.Context, _ model.BackupId, _ model.ServiceID,
-	_ fakeBackupConfig, _ fakeBackupSecrets) (provider.BackupStatus, error) {
-	return provider.BackupStatus{Exists: true}, nil
+func (f *fakeProvider) GetBackupStatus(_ context.Context, _ model.BackupId, _ model.ServiceID, _ int,
+	_ fakeBackupConfig, _ fakeBackupSecrets, _ *int) (model.BackupStatus, error) {
+	return model.BackupStatus{Exists: true}, nil
 }
 
-func (f *fakeProvider) DeleteBackup(_ context.Context, _ model.BackupId, _ model.ServiceID,
-	_ fakeBackupConfig, _ fakeBackupSecrets) error {
+func (f *fakeProvider) DeleteBackup(_ context.Context, _ model.BackupId, _ model.ServiceID, _ int,
+	_ fakeBackupConfig, _ fakeBackupSecrets, _ *int) error {
 	return nil
 }
 
@@ -255,7 +258,7 @@ var _ = Describe("Routes", func() {
 		})
 
 		It("re-wraps plan parameters in the status response", func() {
-			p.status = map[model.ServiceID]provider.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
 				"svc-1": provider.NewServiceStatus(
 					fakeParams{Storage: 1000},
 					fakeConfig{Version: "14.2"},
@@ -286,19 +289,27 @@ var _ = Describe("Routes", func() {
 	Describe("PUT /backups/:id", func() {
 		It("takes the backup ID from the path and the service ID from msId", func() {
 			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1",
-				`{"msId": "svc-1", "config": {"bucket": "b"}, "secrets": {"accessKey": "k"}}`)
+				`{"msId": "svc-1", "teamId": 7, "config": {"bucket": "b"}, "secrets": {"accessKey": "k"}}`)
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(Equal([]backupCall{{
 				BackupID: "backup-1",
 				MsID:     "svc-1",
+				TeamID:   7,
 				Config:   fakeBackupConfig{Bucket: "b"},
 				Secrets:  fakeBackupSecrets{AccessKey: "k"},
 			}}))
 		})
 
 		It("rejects a body without an msId", func() {
-			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"config": {"bucket": "b"}}`)
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"teamId": 7, "config": {"bucket": "b"}}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.backedUp).To(BeEmpty())
+		})
+
+		It("rejects a body without a teamId", func() {
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"msId": "svc-1", "config": {"bucket": "b"}}`)
 
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 			Expect(p.backedUp).To(BeEmpty())
@@ -307,7 +318,7 @@ var _ = Describe("Routes", func() {
 
 	Describe("POST /backups/:id/status", func() {
 		It("returns the backup status contract", func() {
-			w := do(http.MethodPost, "/api/v1/fake/backups/backup-1/status", `{"msId": "svc-1"}`)
+			w := do(http.MethodPost, "/api/v1/fake/backups/backup-1/status", `{"msId": "svc-1", "teamId": 7}`)
 
 			Expect(w.Code).To(Equal(http.StatusOK))
 			Expect(w.Body.String()).To(MatchJSON(`{"exists":true}`))
