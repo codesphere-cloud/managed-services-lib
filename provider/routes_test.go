@@ -191,12 +191,26 @@ var _ = Describe("Routes", func() {
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 			Expect(p.created).To(BeEmpty())
 		})
+
+		It("rejects a body without an id", func() {
+			w := do(http.MethodPost, "/api/v1/fake", `{"teamId": 7}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.created).To(BeEmpty())
+		})
+
+		It("rejects a body without a teamId", func() {
+			w := do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1"}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.created).To(BeEmpty())
+		})
 	})
 
 	Describe("PATCH /:id", func() {
 		It("takes the ID from the path and decodes the service fields alongside the partial payload", func() {
 			w := do(http.MethodPatch, "/api/v1/fake/svc-1",
-				`{"teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
+				`{"id": "svc-1", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
 			Expect(w.Code).To(Equal(http.StatusNoContent))
 			Expect(p.updated).To(HaveLen(1))
@@ -207,9 +221,16 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated[0].Args.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
 		})
 
+		It("rejects a body whose id does not match the path", func() {
+			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-2", "teamId": 7}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.updated).To(BeEmpty())
+		})
+
 		It("leaves sections the request omits unset", func() {
 			do(http.MethodPatch, "/api/v1/fake/svc-1",
-				`{"teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
+				`{"id": "svc-1", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
 			Expect(p.updated[0].Args.Config).To(BeNil())
 		})
@@ -274,6 +295,13 @@ var _ = Describe("Routes", func() {
 				Config:   fakeBackupConfig{Bucket: "b"},
 				Secrets:  fakeBackupSecrets{AccessKey: "k"},
 			}}))
+		})
+
+		It("rejects a body without an msId", func() {
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"config": {"bucket": "b"}}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.backedUp).To(BeEmpty())
 		})
 	})
 

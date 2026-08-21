@@ -85,6 +85,15 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			return
 		}
 
+		if body.ID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+			return
+		}
+		if body.TeamID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "teamId must be a positive integer"})
+			return
+		}
+
 		if err := p.Create(c.Request.Context(), body.ID, body.TeamID, body.CustomSubdomain,
 			body.Plan.Parameters, body.Config, body.Secrets); err != nil {
 			HandleError(c, err)
@@ -108,6 +117,10 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 		}
 
 		id := model.ServiceID(c.Param("id"))
+		if fields.ID != id {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id in body must match path"})
+			return
+		}
 		if err := p.Update(c.Request.Context(), id, fields.TeamID, fields.CustomSubdomain,
 			args); err != nil {
 			HandleError(c, err)
@@ -179,11 +192,13 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 	})
 }
 
-// parseBackup decodes a backup payload and pairs it with the backup ID from the path.
 func parseBackup[Config, Secrets any](c *gin.Context) (model.BackupId, backupBody[Config, Secrets], error) {
 	var body backupBody[Config, Secrets]
 	if err := c.ShouldBindJSON(&body); err != nil {
 		return "", body, err
+	}
+	if body.MsID == "" {
+		return "", body, errors.New("msId is required")
 	}
 	return model.BackupId(c.Param("id")), body, nil
 }
