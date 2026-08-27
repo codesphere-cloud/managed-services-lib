@@ -52,31 +52,11 @@ type (
 	}
 )
 
-type createCall struct {
-	ID              model.ServiceID
-	TeamID          int
-	CustomSubdomain *string
-	Plan            fakeParams
-	Config          fakeConfig
-	Secrets         fakeSecrets
-	RecoverFrom     *model.RecoverFrom
-}
-
-type updateCall struct {
-	ID              model.ServiceID
-	TeamID          int
-	CustomSubdomain *string
-	Args            fakeUpdate
-}
-
-type backupCall struct {
-	BackupID      model.BackupId
-	MsID          model.ServiceID
-	TeamID        int
-	Config        fakeBackupConfig
-	Secrets       fakeBackupSecrets
-	RetentionDays *int
-}
+type (
+	createCall = provider.CreateRequest[fakeParams, fakeConfig, fakeSecrets]
+	updateCall = provider.UpdateRequest[fakeUpdate]
+	backupCall = provider.BackupRequest[fakeBackupConfig, fakeBackupSecrets]
+)
 
 type fakeProvider struct {
 	created  []createCall
@@ -86,9 +66,8 @@ type fakeProvider struct {
 	status   map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
 }
 
-func (f *fakeProvider) Create(_ context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-	plan fakeParams, config fakeConfig, secrets fakeSecrets, recoverFrom *model.RecoverFrom) error {
-	f.created = append(f.created, createCall{id, teamID, customSubdomain, plan, config, secrets, recoverFrom})
+func (f *fakeProvider) Create(_ context.Context, req createCall) error {
+	f.created = append(f.created, req)
 	return nil
 }
 
@@ -100,9 +79,8 @@ func (f *fakeProvider) GetStatus(_ context.Context, _ []model.ServiceID) (map[mo
 	return f.status, nil
 }
 
-func (f *fakeProvider) Update(_ context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-	args fakeUpdate) error {
-	f.updated = append(f.updated, updateCall{id, teamID, customSubdomain, args})
+func (f *fakeProvider) Update(_ context.Context, req updateCall) error {
+	f.updated = append(f.updated, req)
 	return nil
 }
 
@@ -111,19 +89,16 @@ func (f *fakeProvider) Delete(_ context.Context, id model.ServiceID) error {
 	return nil
 }
 
-func (f *fakeProvider) TakeBackup(_ context.Context, backupID model.BackupId, msID model.ServiceID, teamID int,
-	config fakeBackupConfig, secrets fakeBackupSecrets, retentionDays *int) error {
-	f.backedUp = append(f.backedUp, backupCall{backupID, msID, teamID, config, secrets, retentionDays})
+func (f *fakeProvider) TakeBackup(_ context.Context, req backupCall) error {
+	f.backedUp = append(f.backedUp, req)
 	return nil
 }
 
-func (f *fakeProvider) GetBackupStatus(_ context.Context, _ model.BackupId, _ model.ServiceID, _ int,
-	_ fakeBackupConfig, _ fakeBackupSecrets, _ *int) (model.BackupStatus, error) {
+func (f *fakeProvider) GetBackupStatus(_ context.Context, _ backupCall) (model.BackupStatus, error) {
 	return model.BackupStatus{Exists: true}, nil
 }
 
-func (f *fakeProvider) DeleteBackup(_ context.Context, _ model.BackupId, _ model.ServiceID, _ int,
-	_ fakeBackupConfig, _ fakeBackupSecrets, _ *int) error {
+func (f *fakeProvider) DeleteBackup(_ context.Context, _ backupCall) error {
 	return nil
 }
 
@@ -220,8 +195,8 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated[0].ID).To(Equal(model.ServiceID("svc-1")))
 			Expect(p.updated[0].TeamID).To(Equal(7))
 			Expect(p.updated[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
-			Expect(p.updated[0].Args.Plan).NotTo(BeNil())
-			Expect(p.updated[0].Args.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
+			Expect(p.updated[0].Params.Plan).NotTo(BeNil())
+			Expect(p.updated[0].Params.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
 		})
 
 		It("rejects a body whose id does not match the path", func() {
@@ -231,11 +206,27 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated).To(BeEmpty())
 		})
 
+		It("decodes pause as a contract field", func() {
+			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "pause": true}`)
+
+			Expect(w.Code).To(Equal(http.StatusNoContent))
+			Expect(p.updated[0].Pause).To(HaveValue(BeTrue()))
+		})
+
+		It("distinguishes resuming from leaving pause alone", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "pause": false}`)
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
+
+			Expect(p.updated).To(HaveLen(2))
+			Expect(p.updated[0].Pause).To(HaveValue(BeFalse()))
+			Expect(p.updated[1].Pause).To(BeNil())
+		})
+
 		It("leaves sections the request omits unset", func() {
 			do(http.MethodPatch, "/api/v1/fake/svc-1",
 				`{"id": "svc-1", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
-			Expect(p.updated[0].Args.Config).To(BeNil())
+			Expect(p.updated[0].Params.Config).To(BeNil())
 		})
 	})
 
@@ -252,6 +243,8 @@ var _ = Describe("Routes", func() {
 				fakeParams{Storage: 1000},
 				fakeConfig{Version: "14.2"},
 				fakeDetails{Ready: true},
+				nil,
+				nil,
 			)
 
 			Expect(status.Plan.Parameters).To(Equal(fakeParams{Storage: 1000}))
@@ -263,6 +256,8 @@ var _ = Describe("Routes", func() {
 					fakeParams{Storage: 1000},
 					fakeConfig{Version: "14.2"},
 					fakeDetails{Hostname: "10.0.0.5", Ready: true},
+					nil,
+					nil,
 				),
 			}
 
@@ -274,6 +269,23 @@ var _ = Describe("Routes", func() {
 			Expect(string(got["svc-1"]["plan"])).To(MatchJSON(`{"parameters":{"storage":1000}}`))
 			Expect(string(got["svc-1"]["config"])).To(MatchJSON(`{"version":"14.2"}`))
 			Expect(string(got["svc-1"]["details"])).To(MatchJSON(`{"hostname":"10.0.0.5","ready":true}`))
+		})
+
+		It("reports pause at the top level of the status response", func() {
+			paused := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(true), nil)
+			running := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(false), nil)
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+				"svc-1": paused,
+				"svc-2": running,
+			}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1&id=svc-2", "")
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(string(got["svc-1"]["pause"])).To(Equal(`true`))
+			Expect(string(got["svc-2"]["pause"])).To(Equal(`false`))
 		})
 	})
 
@@ -293,11 +305,11 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(Equal([]backupCall{{
-				BackupID: "backup-1",
-				MsID:     "svc-1",
-				TeamID:   7,
-				Config:   fakeBackupConfig{Bucket: "b"},
-				Secrets:  fakeBackupSecrets{AccessKey: "k"},
+				BackupID:  "backup-1",
+				ServiceID: "svc-1",
+				TeamID:    7,
+				Config:    fakeBackupConfig{Bucket: "b"},
+				Secrets:   fakeBackupSecrets{AccessKey: "k"},
 			}}))
 		})
 

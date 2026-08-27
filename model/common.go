@@ -21,18 +21,11 @@ type PlanSpec[Params any] struct {
 // ServiceStatus is the per-service value of the status response. Build it with
 // NewServiceStatus, which applies the contract's plan.parameters wrapper.
 type ServiceStatus[PlanParams, Config, Details any] struct {
-	// Plan echoes the service's current plan parameters.
-	Plan PlanSpec[PlanParams] `json:"plan"`
-
-	// Config echoes the service's current configuration.
-	Config Config `json:"config"`
-
-	// Details is read-only provider data (hostnames, ports, readiness, ...).
-	Details Details `json:"details"`
-
-	// Error carries a provider-detected problem with the service, if any; the
-	// caller sets this directly on the value NewServiceStatus returns.
-	Error string `json:"error,omitempty"`
+	Plan    PlanSpec[PlanParams] `json:"plan"`
+	Config  Config               `json:"config"`
+	Details Details              `json:"details"`
+	Pause   *bool                `json:"pause,omitempty"`
+	Error   *string              `json:"error,omitempty"`
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
@@ -47,9 +40,6 @@ type RecoverFrom struct {
 // BackupStatus is the backup-status response contract expected by Codesphere:
 // whether the backup exists (was taken successfully) and, if it failed, why.
 type BackupStatus struct {
-	// Exists is true once the backup has been taken successfully.
-	Exists bool `json:"exists"`
-
-	// Error contains the failure reason when the backup failed; empty otherwise.
-	Error string `json:"error,omitempty"`
+	Exists bool   `json:"exists"`
+	Error  string `json:"error,omitempty"`
 }

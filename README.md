@@ -20,13 +20,32 @@ Go 1.26+.
 
 ```go
 type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface {
-	Create(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-		plan PlanParams, config Config, secrets Secrets) error
+	Create(ctx context.Context, req CreateRequest[PlanParams, Config, Secrets]) error
 	List(ctx context.Context) ([]model.ServiceID, error)
 	GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]ServiceStatus[PlanParams, Config, Details], error)
-	Update(ctx context.Context, id model.ServiceID, teamID int, customSubdomain *string,
-		args UpdateParams) error
+	Update(ctx context.Context, req UpdateRequest[UpdateParams]) error
 	Delete(ctx context.Context, id model.ServiceID) error
+}
+```
+
+
+```go
+type CreateRequest[PlanParams, Config, Secrets any] struct {
+	ID              model.ServiceID
+	TeamID          int
+	CustomSubdomain *string
+	Plan            PlanParams // contents of plan.parameters
+	Config          Config
+	Secrets         Secrets
+	RecoverFrom     *model.RecoverFrom // set when restoring into a new service
+}
+
+type UpdateRequest[UpdateParams any] struct {
+	ID              model.ServiceID
+	TeamID          int
+	CustomSubdomain *string
+	Pause           *bool       // nil = leave as is
+	Params          UpdateParams // your partial PATCH payload
 }
 ```
 
@@ -35,30 +54,33 @@ the contract's own fields or envelopes yourself:
 
 | The contract defines | You define |
 |---|---|
-| `id`, `teamId`, `customSubdomain` — passed as arguments | `PlanParams` — contents of `plan.parameters` |
-| the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Config` — contents of `config` |
-| `msId` on backup requests | `Secrets` — contents of `secrets` |
-| the `{plan, config, details}` status envelope (`ServiceStatus`) | `Details` — read-only status data (hostnames, ports, readiness) |
-| HTTP status codes and error mapping | `UpdateParams` — your partial `PATCH` payload |
+| `id`, `teamId`, `customSubdomain` — fields on the request struct | `PlanParams` — contents of `plan.parameters` |
+| `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
+| the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
+| `msId` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
+| the `{plan, config, details, pause}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
+| HTTP status codes and error mapping | |
 
 `PATCH` bodies are partial, so make `UpdateParams` fields pointers to tell "not sent" from "sent
-empty". Build status values with `provider.NewServiceStatus(plan, config, details)`. Embed
-`provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
+empty". 
+
+Build status values with `provider.NewServiceStatus(plan, config, details, pause, error)`
+
+Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
 
 Backups are an **opt-in capability**, generic over the provider's own backup-store schemas:
 
 ```go
 type Backups[BackupConfig, BackupSecrets any] interface {
-	TakeBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) error
-	GetBackupStatus(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) (BackupStatus, error)
-	DeleteBackup(ctx context.Context, backupID model.BackupId, msID model.ServiceID,
-		config BackupConfig, secrets BackupSecrets) error
+	TakeBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
+	GetBackupStatus(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) (model.BackupStatus, error)
+	DeleteBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
 }
 ```
 
-A provider that supports backups implements `Backups` and calls `RegisterBackupRoutes`.
+`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the store's `Config`
+and `Secrets`, and `RetentionDays`. A provider that supports backups implements `Backups` and calls
+`RegisterBackupRoutes`.
 
 ## Wiring
 

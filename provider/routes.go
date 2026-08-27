@@ -23,6 +23,14 @@ type serviceFields struct {
 	CustomSubdomain *string         `json:"customSubdomain"`
 }
 
+// updateFields are the service-level fields on an update payload. Pause is a
+// contract field rather than a provider one, so the library decodes it here and
+// passes it to Update; providers don't declare it in their own UpdateParams.
+type updateFields struct {
+	serviceFields
+	Pause *bool `json:"pause"`
+}
+
 // createBody is the create payload: the service fields plus the provider's own
 // sections.
 type createBody[PlanParams, Config, Secrets any] struct {
@@ -92,8 +100,15 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			return
 		}
 
-		if err := p.Create(c.Request.Context(), body.ID, body.TeamID, body.CustomSubdomain,
-			body.Plan.Parameters, body.Config, body.Secrets, body.RecoverFrom); err != nil {
+		if err := p.Create(c.Request.Context(), CreateRequest[PlanParams, Config, Secrets]{
+			ID:              body.ID,
+			TeamID:          body.TeamID,
+			CustomSubdomain: body.CustomSubdomain,
+			Plan:            body.Plan.Parameters,
+			Config:          body.Config,
+			Secrets:         body.Secrets,
+			RecoverFrom:     body.RecoverFrom,
+		}); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -102,7 +117,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 
 	// PATCH /:id - Update an existing service
 	group.PATCH("/:id", func(c *gin.Context) {
-		var fields serviceFields
+		var fields updateFields
 		if err := c.ShouldBindBodyWithJSON(&fields); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -119,8 +134,13 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			c.JSON(http.StatusBadRequest, gin.H{"error": "id in body must match path"})
 			return
 		}
-		if err := p.Update(c.Request.Context(), id, fields.TeamID, fields.CustomSubdomain,
-			args); err != nil {
+		if err := p.Update(c.Request.Context(), UpdateRequest[UpdateParams]{
+			ID:              id,
+			TeamID:          fields.TeamID,
+			CustomSubdomain: fields.CustomSubdomain,
+			Pause:           fields.Pause,
+			Params:          args,
+		}); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -145,14 +165,13 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 ) {
 	// PUT /backups/:id - Take a backup
 	group.PUT("/backups/:id", func(c *gin.Context) {
-		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup[BackupConfig, BackupSecrets](c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.TakeBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
-			body.Config, body.Secrets, body.RetentionDays); err != nil {
+		if err := b.TakeBackup(c.Request.Context(), req); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -161,14 +180,13 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 
 	// POST /backups/:id/status - Get backup status
 	group.POST("/backups/:id/status", func(c *gin.Context) {
-		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup[BackupConfig, BackupSecrets](c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		status, err := b.GetBackupStatus(c.Request.Context(), backupID, body.MsID, body.TeamID,
-			body.Config, body.Secrets, body.RetentionDays)
+		status, err := b.GetBackupStatus(c.Request.Context(), req)
 		if err != nil {
 			HandleError(c, err)
 			return
@@ -178,14 +196,13 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 
 	// DELETE /backups/:id - Delete a backup
 	group.DELETE("/backups/:id", func(c *gin.Context) {
-		backupID, body, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup[BackupConfig, BackupSecrets](c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if err := b.DeleteBackup(c.Request.Context(), backupID, body.MsID, body.TeamID,
-			body.Config, body.Secrets, body.RetentionDays); err != nil {
+		if err := b.DeleteBackup(c.Request.Context(), req); err != nil {
 			HandleError(c, err)
 			return
 		}
@@ -193,18 +210,25 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 	})
 }
 
-func parseBackup[Config, Secrets any](c *gin.Context) (model.BackupId, backupBody[Config, Secrets], error) {
+func parseBackup[Config, Secrets any](c *gin.Context) (BackupRequest[Config, Secrets], error) {
 	var body backupBody[Config, Secrets]
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return "", body, err
+		return BackupRequest[Config, Secrets]{}, err
 	}
 	if body.MsID == "" {
-		return "", body, errors.New("msId is required")
+		return BackupRequest[Config, Secrets]{}, errors.New("msId is required")
 	}
 	if body.TeamID <= 0 {
-		return "", body, errors.New("teamId must be a positive integer")
+		return BackupRequest[Config, Secrets]{}, errors.New("teamId must be a positive integer")
 	}
-	return model.BackupId(c.Param("id")), body, nil
+	return BackupRequest[Config, Secrets]{
+		BackupID:      model.BackupId(c.Param("id")),
+		ServiceID:     body.MsID,
+		TeamID:        body.TeamID,
+		Config:        body.Config,
+		Secrets:       body.Secrets,
+		RetentionDays: body.RetentionDays,
+	}, nil
 }
 
 // HandleError handles provider errors and returns appropriate HTTP responses.
