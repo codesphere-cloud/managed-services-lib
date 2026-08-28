@@ -7,7 +7,7 @@ toolchain go1.26.6
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/onsi/ginkgo/v2 v2.32.1
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/gomega v1.43.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/goleak v1.3.0
 	k8s.io/api v0.35.1
