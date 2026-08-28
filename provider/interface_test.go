@@ -13,14 +13,12 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/provider"
 )
 
-// 1. Concrete schemas to satisfy the generic constraints for our contract test
 type MockPlan struct{ Replicas int }
 type MockPlanUpdate struct{ Replicas *int }
 type MockConfig struct{ Version string }
 type MockConfigUpdate struct{ Version *string }
 type MockSecrets struct{ Password string }
 type MockSecretsUpdate struct{ Password *string }
-
 type MockDetails struct{ Ready bool }
 
 type MockUpdateArgs struct {
@@ -32,15 +30,18 @@ type MockUpdateArgs struct {
 type MockBackupConfig struct{ Bucket string }
 type MockBackupSecrets struct{ Token string }
 
-// 2. MockProvider implements both Provider and Backups to enforce the signatures
 type MockProvider struct{}
 
-// Compile-time checks: If the interface generic parameters or method signatures
-// change in the library, this will immediately fail to compile.
+// Compile-time checks for interface compatibility
 var _ provider.Provider[MockPlan, MockConfig, MockSecrets, MockDetails, MockUpdateArgs] = (*MockProvider)(nil)
 var _ provider.Backups[MockBackupConfig, MockBackupSecrets] = (*MockProvider)(nil)
 
-func (m *MockProvider) Create(ctx context.Context, req provider.CreateRequest[MockPlan, MockConfig, MockSecrets]) error {
+type CreateRequest = provider.CreateRequest[MockPlan, MockConfig, MockSecrets]
+type UpdateRequest = provider.UpdateRequest[MockUpdateArgs]
+type Status = model.ServiceStatus[MockPlan, MockConfig, MockDetails]
+type BackupRequest = provider.BackupRequest[MockBackupConfig, MockBackupSecrets]
+
+func (m *MockProvider) Create(ctx context.Context, req CreateRequest) error {
 	return nil
 }
 
@@ -48,11 +49,11 @@ func (m *MockProvider) List(ctx context.Context) ([]model.ServiceID, error) {
 	return []model.ServiceID{"svc-test-1"}, nil
 }
 
-func (m *MockProvider) GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]model.ServiceStatus[MockPlan, MockConfig, MockDetails], error) {
+func (m *MockProvider) GetStatus(ctx context.Context, ids []model.ServiceID) (map[model.ServiceID]Status, error) {
 	return make(map[model.ServiceID]model.ServiceStatus[MockPlan, MockConfig, MockDetails]), nil
 }
 
-func (m *MockProvider) Update(ctx context.Context, req provider.UpdateRequest[MockUpdateArgs]) error {
+func (m *MockProvider) Update(ctx context.Context, req UpdateRequest) error {
 	return nil
 }
 
@@ -60,15 +61,15 @@ func (m *MockProvider) Delete(ctx context.Context, id model.ServiceID) error {
 	return nil
 }
 
-func (m *MockProvider) TakeBackup(ctx context.Context, req provider.BackupRequest[MockBackupConfig, MockBackupSecrets]) error {
+func (m *MockProvider) TakeBackup(ctx context.Context, req BackupRequest) error {
 	return nil
 }
 
-func (m *MockProvider) GetBackupStatus(ctx context.Context, req provider.BackupRequest[MockBackupConfig, MockBackupSecrets]) (model.BackupStatus, error) {
+func (m *MockProvider) GetBackupStatus(ctx context.Context, req BackupRequest) (model.BackupStatus, error) {
 	return model.BackupStatus{}, nil
 }
 
-func (m *MockProvider) DeleteBackup(ctx context.Context, req provider.BackupRequest[MockBackupConfig, MockBackupSecrets]) error {
+func (m *MockProvider) DeleteBackup(ctx context.Context, req BackupRequest) error {
 	return nil
 }
 
