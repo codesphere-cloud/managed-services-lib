@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.7.0...v0.8.0) (2026-08-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* use object parameters in provider interface
+
+### refac
+
+* use object parameters in provider interface ([9824430](https://github.com/codesphere-cloud/managed-services-lib/commit/98244302f1d738505419399272e420e96879c127))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/onsi/gomega to v1.42.1 ([#24](https://github.com/codesphere-cloud/managed-services-lib/issues/24)) ([88cd230](https://github.com/codesphere-cloud/managed-services-lib/commit/88cd230c183e80858de73f6bae0e5fafb9f34308))
+* **deps:** update module github.com/onsi/gomega to v1.43.0 ([#32](https://github.com/codesphere-cloud/managed-services-lib/issues/32)) ([dada0bc](https://github.com/codesphere-cloud/managed-services-lib/commit/dada0bc07eee0a35291fd695d854e001e1539d4d))
+
 ## [0.7.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.6.0...v0.7.0) (2026-08-21)
 
 
