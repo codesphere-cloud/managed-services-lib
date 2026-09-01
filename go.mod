@@ -2,7 +2,7 @@ module github.com/codesphere-cloud/managed-services-lib
 
 go 1.26
 
-toolchain go1.26.6
+toolchain go1.27.1
 
 require (
 	github.com/gin-gonic/gin v1.12.0
