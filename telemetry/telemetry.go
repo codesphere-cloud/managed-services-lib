@@ -42,9 +42,11 @@ func Setup(ctx context.Context, serviceName string) (func(context.Context) error
 		return noop, nil
 	}
 
-	// Later options win, so OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES override serviceName.
+	// The pod name tells replicas apart. Later options win, so OTEL_SERVICE_NAME and
+	// OTEL_RESOURCE_ATTRIBUTES override both.
+	instance, _ := os.Hostname()
 	res, err := resource.New(ctx,
-		resource.WithAttributes(semconv.ServiceName(serviceName)),
+		resource.WithAttributes(semconv.ServiceName(serviceName), semconv.ServiceInstanceID(instance)),
 		resource.WithTelemetrySDK(),
 		resource.WithFromEnv(),
 	)
