@@ -29,8 +29,8 @@ import (
 // OTEL_EXPORTER_OTLP_ENDPOINT. Without an endpoint, or with OTEL_SDK_DISABLED=true,
 // it does nothing and all instrumentation stays a no-op.
 //
-// Metrics, including Go runtime metrics, are exported unless OTEL_METRICS_EXPORTER=none.
-// Traces are exported only with OTEL_TRACES_EXPORTER=otlp. The other standard OTEL_*
+// Metrics (including Go runtime metrics) and traces are exported unless
+// OTEL_METRICS_EXPORTER or OTEL_TRACES_EXPORTER is "none". The other standard OTEL_*
 // variables apply (service name, resource attributes, protocol, export interval).
 // Call the returned function on shutdown to flush.
 func Setup(ctx context.Context, serviceName string) (func(context.Context) error, error) {
@@ -74,16 +74,14 @@ func Setup(ctx context.Context, serviceName string) (func(context.Context) error
 		}
 	}
 
-	if os.Getenv("OTEL_TRACES_EXPORTER") != "" {
-		exporter, err := autoexport.NewSpanExporter(ctx)
-		if err != nil {
-			return shutdown, err
-		}
-		if !autoexport.IsNoneSpanExporter(exporter) {
-			tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter), sdktrace.WithResource(res))
-			otel.SetTracerProvider(tp)
-			shutdowns = append(shutdowns, tp.Shutdown)
-		}
+	exporter, err := autoexport.NewSpanExporter(ctx)
+	if err != nil {
+		return shutdown, err
+	}
+	if !autoexport.IsNoneSpanExporter(exporter) {
+		tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter), sdktrace.WithResource(res))
+		otel.SetTracerProvider(tp)
+		shutdowns = append(shutdowns, tp.Shutdown)
 	}
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 

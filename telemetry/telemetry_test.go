@@ -67,7 +67,7 @@ var _ = Describe("Setup", func() {
 		Expect(otel.GetMeterProvider()).To(BeIdenticalTo(prev))
 	})
 
-	It("exports metrics but not traces by default", func() {
+	It("exports metrics and traces", func() {
 		startCollector()
 
 		shutdown, err := telemetry.Setup(context.Background(), "test")
@@ -79,14 +79,12 @@ var _ = Describe("Setup", func() {
 		span.End()
 
 		Expect(shutdown(context.Background())).To(Succeed())
-		got := received()
-		Expect(got).To(ContainElement("/v1/metrics"))
-		Expect(got).NotTo(ContainElement("/v1/traces"))
+		Expect(received()).To(ContainElements("/v1/metrics", "/v1/traces"))
 	})
 
-	It("exports traces with OTEL_TRACES_EXPORTER=otlp", func() {
+	It("skips traces with OTEL_TRACES_EXPORTER=none", func() {
 		startCollector()
-		GinkgoT().Setenv("OTEL_TRACES_EXPORTER", "otlp")
+		GinkgoT().Setenv("OTEL_TRACES_EXPORTER", "none")
 
 		shutdown, err := telemetry.Setup(context.Background(), "test")
 		Expect(err).NotTo(HaveOccurred())
@@ -94,6 +92,6 @@ var _ = Describe("Setup", func() {
 		span.End()
 
 		Expect(shutdown(context.Background())).To(Succeed())
-		Expect(received()).To(ContainElement("/v1/traces"))
+		Expect(received()).NotTo(ContainElement("/v1/traces"))
 	})
 })

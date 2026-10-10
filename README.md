@@ -133,10 +133,10 @@ defer shutdown(context.Background())
 
 It exports over OTLP to `OTEL_EXPORTER_OTLP_ENDPOINT` and does nothing when that is unset.
 Instrumented out of the box: incoming requests (`http.server.*`, except `/health` and `/ready`),
-Kubernetes API calls (`http.client.*`) and Go runtime metrics. Add your own metrics with
+Kubernetes API calls (`http.client.*`) and Go runtime metrics, as metrics and traces. Add your own metrics with
 `otel.Meter(...)`, and wrap other HTTP clients with `telemetry.Transport`.
 
-Metrics are on unless `OTEL_METRICS_EXPORTER=none`; traces only with `OTEL_TRACES_EXPORTER=otlp`.
+Turn a signal off with `OTEL_METRICS_EXPORTER=none` or `OTEL_TRACES_EXPORTER=none`.
 The other standard `OTEL_*` variables apply.
 
 ## Configuration
