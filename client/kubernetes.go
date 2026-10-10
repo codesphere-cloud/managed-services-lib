@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -109,6 +111,8 @@ func NewRESTConfig(kubeconfig string) (*rest.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubernetes config: %w", err)
 	}
+	// Records http.client.* metrics and spans for API server calls.
+	config.Wrap(func(rt http.RoundTripper) http.RoundTripper { return otelhttp.NewTransport(rt) })
 	return config, nil
 }
 
