@@ -122,6 +122,27 @@ err := p.Jobs.Run(ctx, ns, spec)
 
 See the package docs and `provider/servicejob_usage_test.go` for details.
 
+## Telemetry
+
+Call `telemetry.Setup` once at startup and its shutdown func on exit:
+
+```go
+shutdown, err := telemetry.Setup(ctx, "ms-backend-mysvc")
+defer shutdown(context.Background())
+```
+
+It exports over OTLP to `OTEL_EXPORTER_OTLP_ENDPOINT` and does nothing when that is unset.
+Instrumented out of the box: incoming requests (`http.server.*`, except `/health` and `/ready`),
+Kubernetes API calls (`http.client.*`) and Go runtime metrics, as metrics and traces. Add your own metrics with
+`otel.Meter(...)`, and wrap other HTTP clients with `telemetry.Transport`.
+
+Logs stay JSON on stdout. Wrap your handler with `telemetry.LogHandler` so lines logged with a
+request context (`InfoContext` etc., and the server's own request log) get `trace_id` and `span_id`:
+
+```go
+slog.SetDefault(slog.New(telemetry.LogHandler(slog.NewJSONHandler(os.Stdout, nil))))
+```
+
 ## Configuration
 
 `config.Load()` reads these environment variables:

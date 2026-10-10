@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/codesphere-cloud/managed-services-lib/config"
 	"github.com/codesphere-cloud/managed-services-lib/middleware"
@@ -39,6 +40,10 @@ func NewServer(cfg *config.Config, providerRoutes map[string]func(*gin.RouterGro
 	router := gin.New()
 
 	// Middleware
+	// Records http.server.request.duration; a no-op until telemetry.Setup installs a meter provider.
+	router.Use(otelgin.Middleware("managed-services", otelgin.WithGinFilter(func(c *gin.Context) bool {
+		return c.FullPath() != "/health" && c.FullPath() != "/ready"
+	})))
 	router.Use(middleware.ErrorHandler(logger))
 	router.Use(middleware.Logger(logger))
 	router.Use(middleware.SecurityHeaders())
