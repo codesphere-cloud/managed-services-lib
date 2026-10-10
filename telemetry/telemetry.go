@@ -14,10 +14,11 @@ import (
 	"net/http"
 	"os"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -25,68 +26,49 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-// Setup installs global meter and tracer providers that export over OTLP to
-// OTEL_EXPORTER_OTLP_ENDPOINT. Without an endpoint, or with OTEL_SDK_DISABLED=true,
-// it does nothing and all instrumentation stays a no-op.
-//
-// Metrics (including Go runtime metrics) and traces are exported unless
-// OTEL_METRICS_EXPORTER or OTEL_TRACES_EXPORTER is "none". The other standard OTEL_*
-// variables apply (service name, resource attributes, protocol, export interval).
+// Setup installs global meter and tracer providers that export metrics (including
+// Go runtime metrics) and traces over OTLP/HTTP to OTEL_EXPORTER_OTLP_ENDPOINT.
+// Without that variable it does nothing and all instrumentation stays a no-op.
 // Call the returned function on shutdown to flush.
 func Setup(ctx context.Context, serviceName string) (func(context.Context) error, error) {
 	noop := func(context.Context) error { return nil }
-	if os.Getenv("OTEL_SDK_DISABLED") == "true" ||
-		(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" &&
-			os.Getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") == "" &&
-			os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") == "") {
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
 		return noop, nil
 	}
 
-	// The pod name tells replicas apart. Later options win, so OTEL_SERVICE_NAME and
-	// OTEL_RESOURCE_ATTRIBUTES override both.
+	// The pod name tells replicas apart.
 	instance, _ := os.Hostname()
 	res, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceName(serviceName), semconv.ServiceInstanceID(instance)),
 		resource.WithTelemetrySDK(),
-		resource.WithFromEnv(),
 	)
 	if err != nil {
 		return noop, err
 	}
 
-	var shutdowns []func(context.Context) error
-	shutdown := func(ctx context.Context) error {
-		var errs []error
-		for _, s := range shutdowns {
-			errs = append(errs, s(ctx))
-		}
-		return errors.Join(errs...)
-	}
-
-	reader, err := autoexport.NewMetricReader(ctx)
+	metricExporter, err := otlpmetrichttp.New(ctx)
 	if err != nil {
 		return noop, err
 	}
-	if !autoexport.IsNoneMetricReader(reader) {
-		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
-		otel.SetMeterProvider(mp)
-		shutdowns = append(shutdowns, mp.Shutdown)
-		if err := runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
-			return shutdown, err
-		}
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+		sdkmetric.WithResource(res),
+	)
+	traceExporter, err := otlptracehttp.New(ctx)
+	if err != nil {
+		return noop, err
+	}
+	tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(traceExporter), sdktrace.WithResource(res))
+	shutdown := func(ctx context.Context) error {
+		return errors.Join(tp.Shutdown(ctx), mp.Shutdown(ctx))
 	}
 
-	exporter, err := autoexport.NewSpanExporter(ctx)
-	if err != nil {
+	otel.SetMeterProvider(mp)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	if err := runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
 		return shutdown, err
 	}
-	if !autoexport.IsNoneSpanExporter(exporter) {
-		tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter), sdktrace.WithResource(res))
-		otel.SetTracerProvider(tp)
-		shutdowns = append(shutdowns, tp.Shutdown)
-	}
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
 	return shutdown, nil
 }
 

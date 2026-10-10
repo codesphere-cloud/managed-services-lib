@@ -136,9 +136,6 @@ Instrumented out of the box: incoming requests (`http.server.*`, except `/health
 Kubernetes API calls (`http.client.*`) and Go runtime metrics, as metrics and traces. Add your own metrics with
 `otel.Meter(...)`, and wrap other HTTP clients with `telemetry.Transport`.
 
-Turn a signal off with `OTEL_METRICS_EXPORTER=none` or `OTEL_TRACES_EXPORTER=none`.
-The other standard `OTEL_*` variables apply.
-
 ## Configuration
 
 `config.Load()` reads these environment variables:

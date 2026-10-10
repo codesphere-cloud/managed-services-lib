@@ -30,9 +30,7 @@ var _ = Describe("Setup", func() {
 			otel.SetMeterProvider(prevMeter)
 			otel.SetTracerProvider(prevTracer)
 		})
-		for _, k := range []string{"OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_TRACES_EXPORTER", "OTEL_METRICS_EXPORTER", "OTEL_SDK_DISABLED"} {
-			GinkgoT().Setenv(k, "")
-		}
+		GinkgoT().Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 	})
 
 	// startCollector records the path of every OTLP export it receives.
@@ -80,18 +78,5 @@ var _ = Describe("Setup", func() {
 
 		Expect(shutdown(context.Background())).To(Succeed())
 		Expect(received()).To(ContainElements("/v1/metrics", "/v1/traces"))
-	})
-
-	It("skips traces with OTEL_TRACES_EXPORTER=none", func() {
-		startCollector()
-		GinkgoT().Setenv("OTEL_TRACES_EXPORTER", "none")
-
-		shutdown, err := telemetry.Setup(context.Background(), "test")
-		Expect(err).NotTo(HaveOccurred())
-		_, span := otel.Tracer("test").Start(context.Background(), "op")
-		span.End()
-
-		Expect(shutdown(context.Background())).To(Succeed())
-		Expect(received()).NotTo(ContainElement("/v1/traces"))
 	})
 })
