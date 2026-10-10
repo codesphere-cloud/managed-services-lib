@@ -136,6 +136,13 @@ Instrumented out of the box: incoming requests (`http.server.*`, except `/health
 Kubernetes API calls (`http.client.*`) and Go runtime metrics, as metrics and traces. Add your own metrics with
 `otel.Meter(...)`, and wrap other HTTP clients with `telemetry.Transport`.
 
+Logs stay JSON on stdout. Wrap your handler with `telemetry.LogHandler` so lines logged with a
+request context (`InfoContext` etc., and the server's own request log) get `trace_id` and `span_id`:
+
+```go
+slog.SetDefault(slog.New(telemetry.LogHandler(slog.NewJSONHandler(os.Stdout, nil))))
+```
+
 ## Configuration
 
 `config.Load()` reads these environment variables:
