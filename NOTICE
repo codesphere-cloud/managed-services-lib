@@ -4,12 +4,6 @@ Copyright (c) Codesphere Inc.
 This project includes code licensed under the following terms:
  
 ----------
-Module: github.com/beorn7/perks/quantile
-Version: v1.0.1
-License: MIT
-License URL: https://github.com/beorn7/perks/blob/v1.0.1/LICENSE
- 
-----------
 Module: github.com/cenkalti/backoff/v5
 Version: v5.0.3
 License: MIT
@@ -244,42 +238,6 @@ License: MIT
 License URL: https://github.com/pelletier/go-toml/blob/v2.4.3/LICENSE
  
 ----------
-Module: github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil
-Version: v1.24.1
-License: BSD-3-Clause
-License URL: https://github.com/prometheus/client_golang/blob/v1.24.1/internal/github.com/golang/gddo/LICENSE
- 
-----------
-Module: github.com/prometheus/client_golang/prometheus
-Version: v1.24.1
-License: Apache-2.0
-License URL: https://github.com/prometheus/client_golang/blob/v1.24.1/LICENSE
- 
-----------
-Module: github.com/prometheus/client_model/go
-Version: v0.6.3
-License: Apache-2.0
-License URL: https://github.com/prometheus/client_model/blob/v0.6.3/LICENSE
- 
-----------
-Module: github.com/prometheus/common
-Version: v0.72.0
-License: Apache-2.0
-License URL: https://github.com/prometheus/common/blob/v0.72.0/LICENSE
- 
-----------
-Module: github.com/prometheus/otlptranslator
-Version: v1.0.0
-License: Apache-2.0
-License URL: https://github.com/prometheus/otlptranslator/blob/v1.0.0/LICENSE
- 
-----------
-Module: github.com/prometheus/procfs
-Version: v0.22.0
-License: Apache-2.0
-License URL: https://github.com/prometheus/procfs/blob/v0.22.0/LICENSE
- 
-----------
 Module: github.com/quic-go/qpack
 Version: v0.6.0
 License: MIT
@@ -346,30 +304,6 @@ License: Apache-2.0
 License URL: https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/sdk/v1.2.1/sdk/LICENSE
  
 ----------
-Module: go.opentelemetry.io/contrib/bridges/prometheus
-Version: v0.72.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/bridges/prometheus/v0.72.0/bridges/prometheus/LICENSE
- 
-----------
-Module: go.opentelemetry.io/contrib/bridges/prometheus
-Version: v0.72.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/bridges/prometheus/v0.72.0/bridges/prometheus/LICENSE
- 
-----------
-Module: go.opentelemetry.io/contrib/exporters/autoexport
-Version: v0.72.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/exporters/autoexport/v0.72.0/exporters/autoexport/LICENSE
- 
-----------
-Module: go.opentelemetry.io/contrib/exporters/autoexport
-Version: v0.72.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/exporters/autoexport/v0.72.0/exporters/autoexport/LICENSE
- 
-----------
 Module: go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 Version: v0.72.0
 License: Apache-2.0
@@ -418,42 +352,6 @@ License: BSD-3-Clause
 License URL: https://github.com/open-telemetry/opentelemetry-go/blob/v1.47.0/LICENSE
  
 ----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
-Version: v0.23.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlplog/otlploggrpc/v0.23.0/exporters/otlp/otlplog/otlploggrpc/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
-Version: v0.23.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlplog/otlploggrpc/v0.23.0/exporters/otlp/otlplog/otlploggrpc/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
-Version: v0.23.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlplog/otlploghttp/v0.23.0/exporters/otlp/otlplog/otlploghttp/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
-Version: v0.23.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlplog/otlploghttp/v0.23.0/exporters/otlp/otlplog/otlploghttp/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
-Version: v1.47.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlpmetric/otlpmetricgrpc/v1.47.0/exporters/otlp/otlpmetric/otlpmetricgrpc/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
-Version: v1.47.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlpmetric/otlpmetricgrpc/v1.47.0/exporters/otlp/otlpmetric/otlpmetricgrpc/LICENSE
- 
-----------
 Module: go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp
 Version: v1.47.0
 License: Apache-2.0
@@ -478,18 +376,6 @@ License: BSD-3-Clause
 License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlptrace/v1.47.0/exporters/otlp/otlptrace/LICENSE
  
 ----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-Version: v1.47.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlptrace/otlptracegrpc/v1.47.0/exporters/otlp/otlptrace/otlptracegrpc/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-Version: v1.47.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlptrace/otlptracegrpc/v1.47.0/exporters/otlp/otlptrace/otlptracegrpc/LICENSE
- 
-----------
 Module: go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 Version: v1.47.0
 License: Apache-2.0
@@ -500,54 +386,6 @@ Module: go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 Version: v1.47.0
 License: BSD-3-Clause
 License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/otlp/otlptrace/otlptracehttp/v1.47.0/exporters/otlp/otlptrace/otlptracehttp/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/prometheus
-Version: v0.69.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/prometheus/v0.69.0/exporters/prometheus/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/prometheus
-Version: v0.69.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/prometheus/v0.69.0/exporters/prometheus/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdoutlog
-Version: v0.23.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdoutlog/v0.23.0/exporters/stdout/stdoutlog/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdoutlog
-Version: v0.23.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdoutlog/v0.23.0/exporters/stdout/stdoutlog/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
-Version: v1.47.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdoutmetric/v1.47.0/exporters/stdout/stdoutmetric/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
-Version: v1.47.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdoutmetric/v1.47.0/exporters/stdout/stdoutmetric/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdouttrace
-Version: v1.47.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdouttrace/v1.47.0/exporters/stdout/stdouttrace/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/exporters/stdout/stdouttrace
-Version: v1.47.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/exporters/stdout/stdouttrace/v1.47.0/exporters/stdout/stdouttrace/LICENSE
  
 ----------
 Module: go.opentelemetry.io/otel/log
@@ -584,18 +422,6 @@ Module: go.opentelemetry.io/otel/sdk
 Version: v1.47.0
 License: BSD-3-Clause
 License URL: https://github.com/open-telemetry/opentelemetry-go/blob/sdk/v1.47.0/sdk/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/sdk/log
-Version: v1.47.0
-License: Apache-2.0
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/sdk/log/v1.47.0/sdk/log/LICENSE
- 
-----------
-Module: go.opentelemetry.io/otel/sdk/log
-Version: v1.47.0
-License: BSD-3-Clause
-License URL: https://github.com/open-telemetry/opentelemetry-go/blob/sdk/log/v1.47.0/sdk/log/LICENSE
  
 ----------
 Module: go.opentelemetry.io/otel/sdk/metric
@@ -688,7 +514,7 @@ License: Apache-2.0
 License URL: https://github.com/googleapis/go-genproto/blob/fad411399dd8/googleapis/api/LICENSE
  
 ----------
-Module: google.golang.org/genproto/googleapis/rpc
+Module: google.golang.org/genproto/googleapis/rpc/status
 Version: v0.0.0-20261005182115-fad411399dd8
 License: Apache-2.0
 License URL: https://github.com/googleapis/go-genproto/blob/fad411399dd8/googleapis/rpc/LICENSE
