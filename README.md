@@ -68,7 +68,7 @@ Build status values with `provider.NewServiceStatus(plan, config, details, pause
 
 Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
 
-Backups are an **opt-in capability**, generic over the provider's own backup-store schemas:
+Backups are an **opt-in capability**, generic over the backup store's config and secrets:
 
 ```go
 type Backups[BackupConfig, BackupSecrets any] interface {
@@ -81,6 +81,11 @@ type Backups[BackupConfig, BackupSecrets any] interface {
 `BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the store's `Config`
 and `Secrets`, and `RetentionDays`. A provider that supports backups implements `Backups` and calls
 `RegisterBackupRoutes`.
+
+Codesphere sends every backup store in the same shape, so use `model.BackupStore` and
+`model.BackupStoreSecrets` as the type arguments. Backup requests are validated against their
+`binding` tags; `recoverFrom` stays raw JSON, so validate it after decoding
+(`binding.Validator.ValidateStruct`).
 
 ## Wiring
 

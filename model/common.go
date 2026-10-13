@@ -5,6 +5,7 @@ package model
 
 import (
 	"encoding/json"
+	"path"
 )
 
 // ServiceID is a unique identifier for a managed service instance.
@@ -42,4 +43,24 @@ type RecoverFrom struct {
 type BackupStatus struct {
 	Exists bool   `json:"exists"`
 	Error  string `json:"error,omitempty"`
+}
+
+// BackupStore is the backup store config Codesphere sends on backup requests
+// and in recoverFrom.
+type BackupStore struct {
+	Type        string `json:"type" binding:"required,eq=s3"`
+	EndpointURL string `json:"endpointUrl" binding:"required,url"`
+	Bucket      string `json:"bucket" binding:"required,min=3,max=63"`
+	Prefix      string `json:"prefix,omitempty" binding:"startsnotwith=/,endsnotwith=/"`
+	AccessKeyID string `json:"accessKeyId" binding:"required"`
+}
+
+// BackupStoreSecrets holds the backup store's secret key.
+type BackupStoreSecrets struct {
+	SecretKey string `json:"secretKey" binding:"required"`
+}
+
+// Path returns the store location as bucket[/prefix].
+func (s BackupStore) Path() string {
+	return path.Join(s.Bucket, s.Prefix)
 }
