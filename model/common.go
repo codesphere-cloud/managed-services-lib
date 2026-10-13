@@ -5,7 +5,6 @@ package model
 
 import (
 	"encoding/json"
-	"path"
 )
 
 // ServiceID is a unique identifier for a managed service instance.
@@ -31,7 +30,8 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
 // service from an existing backup instead of provisioning it empty. Config
-// and Secrets are deferred as raw JSON since they are provider specific.
+// and Secrets are a BackupStore and BackupStoreSecrets, deferred as raw JSON
+// so a provider without backups never has to decode them.
 type RecoverFrom struct {
 	ID      BackupId        `json:"id"`
 	Config  json.RawMessage `json:"config"`
@@ -62,5 +62,8 @@ type BackupStoreSecrets struct {
 
 // Path returns the store location as bucket[/prefix].
 func (s BackupStore) Path() string {
-	return path.Join(s.Bucket, s.Prefix)
+	if s.Prefix == "" {
+		return s.Bucket
+	}
+	return s.Bucket + "/" + s.Prefix
 }

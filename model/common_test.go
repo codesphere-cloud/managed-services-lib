@@ -55,5 +55,6 @@ var _ = Describe("BackupStore", func() {
 		},
 		Entry("bucket only", "", "backups"),
 		Entry("bucket and prefix", "team/7", "backups/team/7"),
+		Entry("prefix is not cleaned", "team/../other", "backups/team/../other"),
 	)
 })
