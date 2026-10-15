@@ -3,10 +3,6 @@
 
 package model
 
-import (
-	"encoding/json"
-)
-
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
 
@@ -29,13 +25,11 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
-// service from an existing backup instead of provisioning it empty. Config
-// and Secrets are a BackupStore and BackupStoreSecrets, deferred as raw JSON
-// so a provider without backups never has to decode them.
+// service from an existing backup instead of provisioning it empty.
 type RecoverFrom struct {
-	ID      BackupId        `json:"id"`
-	Config  json.RawMessage `json:"config"`
-	Secrets json.RawMessage `json:"secrets"`
+	ID      BackupId           `json:"id"`
+	Config  BackupStoreConfig  `json:"config"`
+	Secrets BackupStoreSecrets `json:"secrets"`
 }
 
 // BackupStatus is the backup-status response contract expected by Codesphere:
@@ -45,9 +39,9 @@ type BackupStatus struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// BackupStore is the backup store config Codesphere sends on backup requests
+// BackupStoreConfig is the backup store config Codesphere sends on backup requests
 // and in recoverFrom.
-type BackupStore struct {
+type BackupStoreConfig struct {
 	Type        string `json:"type" binding:"required,eq=s3"`
 	EndpointURL string `json:"endpointUrl" binding:"required,url"`
 	// Permissive: up to 255 characters is the union of the S3-compatible
@@ -64,7 +58,7 @@ type BackupStoreSecrets struct {
 }
 
 // Path returns the store location as bucket[/prefix].
-func (s BackupStore) Path() string {
+func (s BackupStoreConfig) Path() string {
 	if s.Prefix == "" {
 		return s.Bucket
 	}

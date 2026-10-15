@@ -13,9 +13,9 @@ import (
 	"github.com/codesphere-cloud/managed-services-lib/model"
 )
 
-var _ = Describe("BackupStore", func() {
-	valid := func() model.BackupStore {
-		return model.BackupStore{
+var _ = Describe("BackupStoreConfig", func() {
+	valid := func() model.BackupStoreConfig {
+		return model.BackupStoreConfig{
 			Type:        "s3",
 			EndpointURL: "https://s3.example.com",
 			Bucket:      "backups",
@@ -29,17 +29,17 @@ var _ = Describe("BackupStore", func() {
 	})
 
 	DescribeTable("rejects an invalid store",
-		func(mutate func(*model.BackupStore)) {
+		func(mutate func(*model.BackupStoreConfig)) {
 			store := valid()
 			mutate(&store)
 			Expect(binding.Validator.ValidateStruct(store)).NotTo(Succeed())
 		},
-		Entry("unsupported type", func(s *model.BackupStore) { s.Type = "gcs" }),
-		Entry("endpoint not a URL", func(s *model.BackupStore) { s.EndpointURL = "s3.example.com" }),
-		Entry("bucket too long", func(s *model.BackupStore) { s.Bucket = strings.Repeat("a", 256) }),
-		Entry("prefix with leading slash", func(s *model.BackupStore) { s.Prefix = "/team" }),
-		Entry("prefix with trailing slash", func(s *model.BackupStore) { s.Prefix = "team/" }),
-		Entry("missing access key", func(s *model.BackupStore) { s.AccessKeyID = "" }),
+		Entry("unsupported type", func(s *model.BackupStoreConfig) { s.Type = "gcs" }),
+		Entry("endpoint not a URL", func(s *model.BackupStoreConfig) { s.EndpointURL = "s3.example.com" }),
+		Entry("bucket too long", func(s *model.BackupStoreConfig) { s.Bucket = strings.Repeat("a", 256) }),
+		Entry("prefix with leading slash", func(s *model.BackupStoreConfig) { s.Prefix = "/team" }),
+		Entry("prefix with trailing slash", func(s *model.BackupStoreConfig) { s.Prefix = "team/" }),
+		Entry("missing access key", func(s *model.BackupStoreConfig) { s.AccessKeyID = "" }),
 	)
 
 	It("rejects secrets without a secret key", func() {

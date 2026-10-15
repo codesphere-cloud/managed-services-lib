@@ -42,20 +42,12 @@ type (
 		} `json:"plan"`
 		Config *fakeConfig `json:"config"`
 	}
-
-	fakeBackupConfig struct {
-		Bucket string `json:"bucket"`
-	}
-
-	fakeBackupSecrets struct {
-		AccessKey string `json:"accessKey"`
-	}
 )
 
 type (
 	createCall = provider.CreateRequest[fakeParams, fakeConfig, fakeSecrets]
 	updateCall = provider.UpdateRequest[fakeUpdate]
-	backupCall = provider.BackupRequest[fakeBackupConfig, fakeBackupSecrets]
+	backupCall = provider.BackupRequest
 )
 
 type fakeProvider struct {
@@ -101,6 +93,10 @@ func (f *fakeProvider) GetBackupStatus(_ context.Context, _ backupCall) (model.B
 func (f *fakeProvider) DeleteBackup(_ context.Context, _ backupCall) error {
 	return nil
 }
+
+const backupStoreJSON = `"config": {"type": "s3", "endpointUrl": "https://s3.example.com", "bucket": "b", "accessKeyId": "k"}, "secrets": {"secretKey": "s"}`
+
+var backupStoreConfig = model.BackupStoreConfig{Type: "s3", EndpointURL: "https://s3.example.com", Bucket: "b", AccessKeyID: "k"}
 
 var _ = Describe("Routes", func() {
 	var (
@@ -179,6 +175,26 @@ var _ = Describe("Routes", func() {
 
 		It("rejects a body without a teamId", func() {
 			w := do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1"}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.created).To(BeEmpty())
+		})
+
+		It("decodes recoverFrom into the backup store contract", func() {
+			w := do(http.MethodPost, "/api/v1/fake",
+				`{"id": "svc-1", "teamId": 7, "recoverFrom": {"id": "backup-1", `+backupStoreJSON+`}}`)
+
+			Expect(w.Code).To(Equal(http.StatusCreated))
+			Expect(p.created[0].RecoverFrom).To(HaveValue(Equal(model.RecoverFrom{
+				ID:      "backup-1",
+				Config:  backupStoreConfig,
+				Secrets: model.BackupStoreSecrets{SecretKey: "s"},
+			})))
+		})
+
+		It("rejects a recoverFrom with an invalid backup store", func() {
+			w := do(http.MethodPost, "/api/v1/fake",
+				`{"id": "svc-1", "teamId": 7, "recoverFrom": {"id": "backup-1", "config": {"type": "s3"}}}`)
 
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 			Expect(p.created).To(BeEmpty())
@@ -307,28 +323,35 @@ var _ = Describe("Routes", func() {
 
 	Describe("PUT /backups/:id", func() {
 		It("takes the backup ID from the path and the service ID from msId", func() {
-			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1",
-				`{"msId": "svc-1", "teamId": 7, "config": {"bucket": "b"}, "secrets": {"accessKey": "k"}}`)
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"msId": "svc-1", "teamId": 7, `+backupStoreJSON+`}`)
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(Equal([]backupCall{{
 				BackupID:  "backup-1",
 				ServiceID: "svc-1",
 				TeamID:    7,
-				Config:    fakeBackupConfig{Bucket: "b"},
-				Secrets:   fakeBackupSecrets{AccessKey: "k"},
+				Config:    backupStoreConfig,
+				Secrets:   model.BackupStoreSecrets{SecretKey: "s"},
 			}}))
 		})
 
 		It("rejects a body without an msId", func() {
-			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"teamId": 7, "config": {"bucket": "b"}}`)
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"teamId": 7, `+backupStoreJSON+`}`)
 
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 			Expect(p.backedUp).To(BeEmpty())
 		})
 
 		It("rejects a body without a teamId", func() {
-			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"msId": "svc-1", "config": {"bucket": "b"}}`)
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"msId": "svc-1", `+backupStoreJSON+`}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.backedUp).To(BeEmpty())
+		})
+
+		It("rejects an invalid backup store", func() {
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1",
+				`{"msId": "svc-1", "teamId": 7, "config": {"type": "s3", "bucket": "b"}, "secrets": {"secretKey": "s"}}`)
 
 			Expect(w.Code).To(Equal(http.StatusBadRequest))
 			Expect(p.backedUp).To(BeEmpty())
@@ -337,7 +360,7 @@ var _ = Describe("Routes", func() {
 
 	Describe("POST /backups/:id/status", func() {
 		It("returns the backup status contract", func() {
-			w := do(http.MethodPost, "/api/v1/fake/backups/backup-1/status", `{"msId": "svc-1", "teamId": 7}`)
+			w := do(http.MethodPost, "/api/v1/fake/backups/backup-1/status", `{"msId": "svc-1", "teamId": 7, `+backupStoreJSON+`}`)
 
 			Expect(w.Code).To(Equal(http.StatusOK))
 			Expect(w.Body.String()).To(MatchJSON(`{"exists":true}`))
