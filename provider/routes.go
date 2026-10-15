@@ -18,8 +18,8 @@ import (
 // update payloads, as opposed to the provider's own sections. On update the ID
 // comes from the path instead.
 type serviceFields struct {
-	ID              model.ServiceID `json:"id"`
-	TeamID          int             `json:"teamId"`
+	ID              model.ServiceID `json:"id" binding:"required"`
+	TeamID          int             `json:"teamId" binding:"gt=0"`
 	CustomSubdomain *string         `json:"customSubdomain"`
 }
 
@@ -43,8 +43,8 @@ type createBody[PlanParams, Config, Secrets any] struct {
 
 // backupBody is the backup payload; the backup ID comes from the path.
 type backupBody[Config, Secrets any] struct {
-	MsID          model.ServiceID `json:"msId"`
-	TeamID        int             `json:"teamId"`
+	MsID          model.ServiceID `json:"msId" binding:"required"`
+	TeamID        int             `json:"teamId" binding:"gt=0"`
 	Config        Config          `json:"config"`
 	Secrets       Secrets         `json:"secrets"`
 	RetentionDays *int            `json:"retentionDays,omitempty"`
@@ -88,15 +88,6 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 		var body createBody[PlanParams, Config, Secrets]
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		if body.ID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
-			return
-		}
-		if body.TeamID <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "teamId must be a positive integer"})
 			return
 		}
 
@@ -214,12 +205,6 @@ func parseBackup[Config, Secrets any](c *gin.Context) (BackupRequest[Config, Sec
 	var body backupBody[Config, Secrets]
 	if err := c.ShouldBindJSON(&body); err != nil {
 		return BackupRequest[Config, Secrets]{}, err
-	}
-	if body.MsID == "" {
-		return BackupRequest[Config, Secrets]{}, errors.New("msId is required")
-	}
-	if body.TeamID <= 0 {
-		return BackupRequest[Config, Secrets]{}, errors.New("teamId must be a positive integer")
 	}
 	return BackupRequest[Config, Secrets]{
 		BackupID:      model.BackupId(c.Param("id")),

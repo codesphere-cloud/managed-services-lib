@@ -206,6 +206,13 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated).To(BeEmpty())
 		})
 
+		It("rejects a body without a teamId", func() {
+			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1"}`)
+
+			Expect(w.Code).To(Equal(http.StatusBadRequest))
+			Expect(p.updated).To(BeEmpty())
+		})
+
 		It("decodes pause as a contract field", func() {
 			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "pause": true}`)
 
