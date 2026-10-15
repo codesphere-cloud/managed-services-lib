@@ -3,9 +3,7 @@
 
 package model
 
-import (
-	"encoding/json"
-)
+import "time"
 
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
@@ -29,12 +27,15 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
-// service from an existing backup instead of provisioning it empty. Config
-// and Secrets are deferred as raw JSON since they are provider specific.
+// service instead of provisioning it empty: either from the backup ID, or
+// (point-in-time recovery) from service MsID's backups as close to Time as
+// possible. MsID does not need to exist anymore.
 type RecoverFrom struct {
-	ID      BackupId        `json:"id"`
-	Config  json.RawMessage `json:"config"`
-	Secrets json.RawMessage `json:"secrets"`
+	ID      BackupId           `json:"id,omitempty" binding:"required_without=MsID,excluded_with=MsID"`
+	MsID    ServiceID          `json:"msId,omitempty" binding:"required_without=ID"`
+	Time    *time.Time         `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
+	Config  BackupStoreConfig  `json:"config"`
+	Secrets BackupStoreSecrets `json:"secrets"`
 }
 
 // BackupStatus is the backup-status response contract expected by Codesphere:
@@ -42,4 +43,30 @@ type RecoverFrom struct {
 type BackupStatus struct {
 	Exists bool   `json:"exists"`
 	Error  string `json:"error,omitempty"`
+}
+
+// BackupStoreConfig is the backup store config Codesphere sends on backup requests
+// and in recoverFrom.
+type BackupStoreConfig struct {
+	Type        string `json:"type" binding:"required,eq=s3"`
+	EndpointURL string `json:"endpointUrl" binding:"required,url"`
+	// Permissive: up to 255 characters is the union of the S3-compatible
+	// naming rules (Ceph's relaxed names include AWS and GCS names).
+	// Store-specific rules are left to the store.
+	Bucket      string `json:"bucket" binding:"required,max=255"`
+	Prefix      string `json:"prefix,omitempty" binding:"startsnotwith=/,endsnotwith=/"`
+	AccessKeyID string `json:"accessKeyId" binding:"required"`
+}
+
+// BackupStoreSecrets holds the backup store's secret key.
+type BackupStoreSecrets struct {
+	SecretKey string `json:"secretKey" binding:"required"`
+}
+
+// Path returns the store location as bucket[/prefix].
+func (s BackupStoreConfig) Path() string {
+	if s.Prefix == "" {
+		return s.Bucket
+	}
+	return s.Bucket + "/" + s.Prefix
 }

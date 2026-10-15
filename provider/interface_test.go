@@ -27,19 +27,15 @@ type MockUpdateArgs struct {
 	Secrets *MockSecretsUpdate
 }
 
-type MockBackupConfig struct{ Bucket string }
-type MockBackupSecrets struct{ Token string }
-
 type MockProvider struct{}
 
 // Compile-time checks for interface compatibility
 var _ provider.Provider[MockPlan, MockConfig, MockSecrets, MockDetails, MockUpdateArgs] = (*MockProvider)(nil)
-var _ provider.Backups[MockBackupConfig, MockBackupSecrets] = (*MockProvider)(nil)
+var _ provider.Backups = (*MockProvider)(nil)
 
 type CreateRequest = provider.CreateRequest[MockPlan, MockConfig, MockSecrets]
 type UpdateRequest = provider.UpdateRequest[MockUpdateArgs]
 type Status = model.ServiceStatus[MockPlan, MockConfig, MockDetails]
-type BackupRequest = provider.BackupRequest[MockBackupConfig, MockBackupSecrets]
 
 func (m *MockProvider) Create(ctx context.Context, req CreateRequest) error {
 	return nil
@@ -61,15 +57,15 @@ func (m *MockProvider) Delete(ctx context.Context, id model.ServiceID) error {
 	return nil
 }
 
-func (m *MockProvider) TakeBackup(ctx context.Context, req BackupRequest) error {
+func (m *MockProvider) TakeBackup(ctx context.Context, req provider.BackupRequest) error {
 	return nil
 }
 
-func (m *MockProvider) GetBackupStatus(ctx context.Context, req BackupRequest) (model.BackupStatus, error) {
+func (m *MockProvider) GetBackupStatus(ctx context.Context, req provider.BackupRequest) (model.BackupStatus, error) {
 	return model.BackupStatus{}, nil
 }
 
-func (m *MockProvider) DeleteBackup(ctx context.Context, req BackupRequest) error {
+func (m *MockProvider) DeleteBackup(ctx context.Context, req provider.BackupRequest) error {
 	return nil
 }
 
@@ -117,12 +113,17 @@ var _ = Describe("Provider API Contract", func() {
 	})
 
 	It("compiles and accepts the expected BackupRequest shape", func() {
-		req := provider.BackupRequest[MockBackupConfig, MockBackupSecrets]{
-			BackupID:      "backup-789",
-			ServiceID:     "svc-123",
-			TeamID:        456,
-			Config:        MockBackupConfig{Bucket: "s3-bucket"},
-			Secrets:       MockBackupSecrets{Token: "xyz"},
+		req := provider.BackupRequest{
+			BackupID:  "backup-789",
+			ServiceID: "svc-123",
+			TeamID:    456,
+			Config: model.BackupStoreConfig{
+				Type:        "s3",
+				EndpointURL: "https://s3.example.com",
+				Bucket:      "s3-bucket",
+				AccessKeyID: "key",
+			},
+			Secrets:       model.BackupStoreSecrets{SecretKey: "xyz"},
 			RetentionDays: new(30),
 		}
 

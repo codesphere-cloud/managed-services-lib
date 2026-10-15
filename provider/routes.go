@@ -42,12 +42,12 @@ type createBody[PlanParams, Config, Secrets any] struct {
 }
 
 // backupBody is the backup payload; the backup ID comes from the path.
-type backupBody[Config, Secrets any] struct {
-	MsID          model.ServiceID `json:"msId" binding:"required"`
-	TeamID        int             `json:"teamId" binding:"gt=0"`
-	Config        Config          `json:"config"`
-	Secrets       Secrets         `json:"secrets"`
-	RetentionDays *int            `json:"retentionDays,omitempty"`
+type backupBody struct {
+	MsID          model.ServiceID          `json:"msId" binding:"required"`
+	TeamID        int                      `json:"teamId" binding:"gt=0"`
+	Config        model.BackupStoreConfig  `json:"config"`
+	Secrets       model.BackupStoreSecrets `json:"secrets"`
+	RetentionDays *int                     `json:"retentionDays,omitempty"`
 }
 
 // RegisterRoutes registers CRUD routes for a managed service provider on the given router group.
@@ -150,13 +150,13 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 }
 
 // RegisterBackupRoutes mounts backup endpoints.
-func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
+func RegisterBackupRoutes(
 	group *gin.RouterGroup,
-	b Backups[BackupConfig, BackupSecrets],
+	b Backups,
 ) {
 	// PUT /backups/:id - Take a backup
 	group.PUT("/backups/:id", func(c *gin.Context) {
-		req, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup(c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -171,7 +171,7 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 
 	// POST /backups/:id/status - Get backup status
 	group.POST("/backups/:id/status", func(c *gin.Context) {
-		req, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup(c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -187,7 +187,7 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 
 	// DELETE /backups/:id - Delete a backup
 	group.DELETE("/backups/:id", func(c *gin.Context) {
-		req, err := parseBackup[BackupConfig, BackupSecrets](c)
+		req, err := parseBackup(c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -201,12 +201,12 @@ func RegisterBackupRoutes[BackupConfig, BackupSecrets any](
 	})
 }
 
-func parseBackup[Config, Secrets any](c *gin.Context) (BackupRequest[Config, Secrets], error) {
-	var body backupBody[Config, Secrets]
+func parseBackup(c *gin.Context) (BackupRequest, error) {
+	var body backupBody
 	if err := c.ShouldBindJSON(&body); err != nil {
-		return BackupRequest[Config, Secrets]{}, err
+		return BackupRequest{}, err
 	}
-	return BackupRequest[Config, Secrets]{
+	return BackupRequest{
 		BackupID:      model.BackupId(c.Param("id")),
 		ServiceID:     body.MsID,
 		TeamID:        body.TeamID,

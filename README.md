@@ -68,19 +68,22 @@ Build status values with `provider.NewServiceStatus(plan, config, details, pause
 
 Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
 
-Backups are an **opt-in capability**, generic over the provider's own backup-store schemas:
+Backups are an **opt-in capability**:
 
 ```go
-type Backups[BackupConfig, BackupSecrets any] interface {
-	TakeBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
-	GetBackupStatus(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) (model.BackupStatus, error)
-	DeleteBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
+type Backups interface {
+	TakeBackup(ctx context.Context, req BackupRequest) error
+	GetBackupStatus(ctx context.Context, req BackupRequest) (model.BackupStatus, error)
+	DeleteBackup(ctx context.Context, req BackupRequest) error
 }
 ```
 
-`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the store's `Config`
-and `Secrets`, and `RetentionDays`. A provider that supports backups implements `Backups` and calls
-`RegisterBackupRoutes`.
+`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the backup store's
+`Config` (`model.BackupStoreConfig`) and `Secrets` (`model.BackupStoreSecrets`), and `RetentionDays`.
+The same store arrives in `CreateRequest.RecoverFrom`, which names either a backup `ID` or, for
+point-in-time recovery, a source `MsID` and `Time`. Both are validated against their `binding`
+tags before your provider is called. A provider that supports backups implements `Backups` and
+calls `RegisterBackupRoutes`.
 
 ## Wiring
 

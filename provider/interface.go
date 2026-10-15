@@ -36,12 +36,12 @@ type UpdateRequest[UpdateParams any] struct {
 // BackupRequest is a decoded backup call. The same shape serves taking, polling
 // and deleting a backup, since Codesphere sends the backup store's coordinates
 // with each one.
-type BackupRequest[BackupConfig, BackupSecrets any] struct {
+type BackupRequest struct {
 	BackupID      model.BackupId
 	ServiceID     model.ServiceID
 	TeamID        int
-	Config        BackupConfig
-	Secrets       BackupSecrets
+	Config        model.BackupStoreConfig
+	Secrets       model.BackupStoreSecrets
 	RetentionDays *int
 }
 
@@ -98,15 +98,14 @@ func NewServiceStatus[PlanParams, Config, Details any](
 }
 
 // Backups is the optional backup capability, kept separate from Provider so a
-// provider opts in by implementing it. The type parameters are the provider's own
-// backup-store schemas.
-type Backups[BackupConfig, BackupSecrets any] interface {
+// provider opts in by implementing it.
+type Backups interface {
 	// TakeBackup initiates a backup of the managed service.
-	TakeBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
+	TakeBackup(ctx context.Context, req BackupRequest) error
 
 	// GetBackupStatus returns the status of a backup.
-	GetBackupStatus(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) (model.BackupStatus, error)
+	GetBackupStatus(ctx context.Context, req BackupRequest) (model.BackupStatus, error)
 
 	// DeleteBackup deletes a backup.
-	DeleteBackup(ctx context.Context, req BackupRequest[BackupConfig, BackupSecrets]) error
+	DeleteBackup(ctx context.Context, req BackupRequest) error
 }
