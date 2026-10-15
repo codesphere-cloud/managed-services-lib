@@ -50,7 +50,10 @@ type BackupStatus struct {
 type BackupStore struct {
 	Type        string `json:"type" binding:"required,eq=s3"`
 	EndpointURL string `json:"endpointUrl" binding:"required,url"`
-	Bucket      string `json:"bucket" binding:"required,min=3,max=63"`
+	// Permissive: up to 255 characters is the union of the S3-compatible
+	// naming rules (Ceph's relaxed names include AWS and GCS names).
+	// Store-specific rules are left to the store.
+	Bucket      string `json:"bucket" binding:"required,max=255"`
 	Prefix      string `json:"prefix,omitempty" binding:"startsnotwith=/,endsnotwith=/"`
 	AccessKeyID string `json:"accessKeyId" binding:"required"`
 }
