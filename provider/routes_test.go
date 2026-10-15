@@ -188,8 +188,8 @@ var _ = Describe("Routes", func() {
 			Expect(w.Code).To(Equal(http.StatusCreated))
 			Expect(p.created[0].RecoverFrom).To(HaveValue(Equal(model.RecoverFrom{
 				ID:      "backup-1",
-				Config:  backupStoreConfig,
-				Secrets: model.BackupStoreSecrets{SecretKey: "s"},
+				Config:  &backupStoreConfig,
+				Secrets: &model.BackupStoreSecrets{SecretKey: "s"},
 			})))
 		})
 
@@ -201,8 +201,8 @@ var _ = Describe("Routes", func() {
 			Expect(p.created[0].RecoverFrom).To(HaveValue(Equal(model.RecoverFrom{
 				MsID:    "svc-0",
 				Time:    new(time.Date(2026, 4, 1, 15, 0, 0, 0, time.UTC)),
-				Config:  backupStoreConfig,
-				Secrets: model.BackupStoreSecrets{SecretKey: "s"},
+				Config:  &backupStoreConfig,
+				Secrets: &model.BackupStoreSecrets{SecretKey: "s"},
 			})))
 		})
 
@@ -218,6 +218,17 @@ var _ = Describe("Routes", func() {
 			Entry("both", `"id": "backup-1", "msId": "svc-0", "time": "2026-04-01T15:00:00Z", `),
 			Entry("msId without time", `"msId": "svc-0", `),
 			Entry("time without msId", `"id": "backup-1", "time": "2026-04-01T15:00:00Z", `),
+		)
+
+		DescribeTable("rejects a recoverFrom without config or secrets",
+			func(rf string) {
+				w := do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1", "teamId": 7, "recoverFrom": `+rf+`}`)
+
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+				Expect(p.created).To(BeEmpty())
+			},
+			Entry("no config", `{"id": "backup-1", "secrets": {"secretKey": "s"}}`),
+			Entry("no secrets", `{"id": "backup-1", "config": {"type": "s3", "endpointUrl": "https://s3.example.com", "bucket": "b", "accessKeyId": "k"}}`),
 		)
 
 		It("rejects a recoverFrom with an invalid backup store", func() {

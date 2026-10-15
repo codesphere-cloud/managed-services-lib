@@ -31,11 +31,11 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 // (point-in-time recovery) from service MsID's backups as close to Time as
 // possible. MsID does not need to exist anymore.
 type RecoverFrom struct {
-	ID      BackupId           `json:"id,omitempty" binding:"required_without=MsID,excluded_with=MsID"`
-	MsID    ServiceID          `json:"msId,omitempty" binding:"required_without=ID"`
-	Time    *time.Time         `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
-	Config  BackupStoreConfig  `json:"config"`
-	Secrets BackupStoreSecrets `json:"secrets"`
+	ID      BackupId            `json:"id,omitempty" binding:"required_without=MsID,excluded_with=MsID"`
+	MsID    ServiceID           `json:"msId,omitempty" binding:"required_without=ID"`
+	Time    *time.Time          `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
+	Config  *BackupStoreConfig  `json:"config" binding:"required"`
+	Secrets *BackupStoreSecrets `json:"secrets" binding:"required"`
 }
 
 // BackupStatus is the backup-status response contract expected by Codesphere:
