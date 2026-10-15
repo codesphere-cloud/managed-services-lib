@@ -80,7 +80,8 @@ type Backups interface {
 
 `BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the backup store's
 `Config` (`model.BackupStoreConfig`) and `Secrets` (`model.BackupStoreSecrets`), and `RetentionDays`.
-The same store arrives in `CreateRequest.RecoverFrom`. Both are validated against their `binding`
+The same store arrives in `CreateRequest.RecoverFrom`, which names either a backup `ID` or, for
+point-in-time recovery, a source `MsID` and `Time`. Both are validated against their `binding`
 tags before your provider is called. A provider that supports backups implements `Backups` and
 calls `RegisterBackupRoutes`.
 

@@ -3,6 +3,8 @@
 
 package model
 
+import "time"
+
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
 
@@ -25,9 +27,13 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
-// service from an existing backup instead of provisioning it empty.
+// service instead of provisioning it empty: either from the backup ID, or
+// (point-in-time recovery) from service MsID's backups as close to Time as
+// possible. MsID does not need to exist anymore.
 type RecoverFrom struct {
-	ID      BackupId           `json:"id"`
+	ID      BackupId           `json:"id,omitempty" binding:"required_without=MsID,excluded_with=MsID"`
+	MsID    ServiceID          `json:"msId,omitempty" binding:"required_without=ID"`
+	Time    *time.Time         `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
 	Config  BackupStoreConfig  `json:"config"`
 	Secrets BackupStoreSecrets `json:"secrets"`
 }

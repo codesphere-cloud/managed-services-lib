@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/onsi/ginkgo/v2"
@@ -191,6 +192,33 @@ var _ = Describe("Routes", func() {
 				Secrets: model.BackupStoreSecrets{SecretKey: "s"},
 			})))
 		})
+
+		It("decodes a point-in-time recoverFrom", func() {
+			w := do(http.MethodPost, "/api/v1/fake",
+				`{"id": "svc-1", "teamId": 7, "recoverFrom": {"msId": "svc-0", "time": "2026-04-01T15:00:00.000Z", `+backupStoreJSON+`}}`)
+
+			Expect(w.Code).To(Equal(http.StatusCreated))
+			Expect(p.created[0].RecoverFrom).To(HaveValue(Equal(model.RecoverFrom{
+				MsID:    "svc-0",
+				Time:    new(time.Date(2026, 4, 1, 15, 0, 0, 0, time.UTC)),
+				Config:  backupStoreConfig,
+				Secrets: model.BackupStoreSecrets{SecretKey: "s"},
+			})))
+		})
+
+		DescribeTable("rejects a recoverFrom that is neither a backup nor a point in time",
+			func(ref string) {
+				w := do(http.MethodPost, "/api/v1/fake",
+					`{"id": "svc-1", "teamId": 7, "recoverFrom": {`+ref+backupStoreJSON+`}}`)
+
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+				Expect(p.created).To(BeEmpty())
+			},
+			Entry("neither", ``),
+			Entry("both", `"id": "backup-1", "msId": "svc-0", "time": "2026-04-01T15:00:00Z", `),
+			Entry("msId without time", `"msId": "svc-0", `),
+			Entry("time without msId", `"id": "backup-1", "time": "2026-04-01T15:00:00Z", `),
+		)
 
 		It("rejects a recoverFrom with an invalid backup store", func() {
 			w := do(http.MethodPost, "/api/v1/fake",
