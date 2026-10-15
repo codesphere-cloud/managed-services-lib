@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.10.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.9.0...v0.10.0) (2026-10-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* type backups with the backup store contract ([#39](https://github.com/codesphere-cloud/managed-services-lib/issues/39))
+
+### Features
+
+* type backups with the backup store contract ([#39](https://github.com/codesphere-cloud/managed-services-lib/issues/39)) ([929f572](https://github.com/codesphere-cloud/managed-services-lib/commit/929f572c99900846d125ed1da51c953e2469e962))
+
+
+### Bug Fixes
+
+* **deps:** update kubernetes monorepo to v0.37.1 ([#23](https://github.com/codesphere-cloud/managed-services-lib/issues/23)) ([76db79d](https://github.com/codesphere-cloud/managed-services-lib/commit/76db79de10741636c2c1e85527c458e30d14b148))
+* **deps:** update module github.com/onsi/ginkgo/v2 to v2.33.1 ([#35](https://github.com/codesphere-cloud/managed-services-lib/issues/35)) ([f7c30c1](https://github.com/codesphere-cloud/managed-services-lib/commit/f7c30c1391d03ee7f355a19d693bc64ba25566ea))
+* **deps:** update module github.com/onsi/gomega to v1.44.0 ([#36](https://github.com/codesphere-cloud/managed-services-lib/issues/36)) ([cf6c49e](https://github.com/codesphere-cloud/managed-services-lib/commit/cf6c49e18b3e2a5dcab3f19cf3aef2f2576ac8ca))
+
 ## [0.9.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.8.0...v0.9.0) (2026-10-10)
 
 
