@@ -284,6 +284,40 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated[1].Pause).To(BeNil())
 		})
 
+		It("decodes backups.enabled=false as a contract field", func() {
+			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "backups": {"enabled": false}}`)
+
+			Expect(w.Code).To(Equal(http.StatusNoContent))
+			Expect(p.updated[0].Backups).NotTo(BeNil())
+			Expect(p.updated[0].Backups.Enabled).To(HaveValue(BeFalse()))
+		})
+
+		It("decodes backups.enabled=true as a contract field", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "backups": {"enabled": true}}`)
+
+			Expect(p.updated[0].Backups).NotTo(BeNil())
+			Expect(p.updated[0].Backups.Enabled).To(HaveValue(BeTrue()))
+		})
+
+		It("leaves backups nil when the request omits them", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
+
+			Expect(p.updated[0].Backups).To(BeNil())
+		})
+
+		It("leaves backups.enabled nil when the backups section is empty", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "backups": {}}`)
+
+			Expect(p.updated[0].Backups).NotTo(BeNil())
+			Expect(p.updated[0].Backups.Enabled).To(BeNil())
+		})
+
+		It("ignores a top-level enabled that is not nested under backups", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "enabled": false}`)
+
+			Expect(p.updated[0].Backups).To(BeNil())
+		})
+
 		It("leaves sections the request omits unset", func() {
 			do(http.MethodPatch, "/api/v1/fake/svc-1",
 				`{"id": "svc-1", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
@@ -348,6 +382,37 @@ var _ = Describe("Routes", func() {
 			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
 			Expect(string(got["svc-1"]["pause"])).To(Equal(`true`))
 			Expect(string(got["svc-2"]["pause"])).To(Equal(`false`))
+		})
+
+		It("reports backups at the top level of the status response", func() {
+			enabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil)
+			enabled.Backups = &model.ServiceBackups{Enabled: new(true)}
+			disabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil)
+			disabled.Backups = &model.ServiceBackups{Enabled: new(false)}
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+				"svc-1": enabled,
+				"svc-2": disabled,
+			}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1&id=svc-2", "")
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(string(got["svc-1"]["backups"])).To(MatchJSON(`{"enabled":true}`))
+			Expect(string(got["svc-2"]["backups"])).To(MatchJSON(`{"enabled":false}`))
+		})
+
+		It("omits backups from the status response when the provider does not set them", func() {
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+				"svc-1": provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil),
+			}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
+
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(got["svc-1"]).NotTo(HaveKey("backups"))
 		})
 	})
 

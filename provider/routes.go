@@ -23,20 +23,13 @@ type serviceFields struct {
 	CustomSubdomain *string         `json:"customSubdomain"`
 }
 
-// backupsFields are the service-level backups fields the contract defines on
-// update payloads, decoded by the library and passed to Update as
-// UpdateRequest.Backups rather than declared in the provider's UpdateParams.
-type backupsFields struct {
-	Enabled *bool `json:"enabled,omitempty"`
-}
-
 // updateFields are the service-level fields on an update payload. Pause is a
 // contract field rather than a provider one, so the library decodes it here and
 // passes it to Update; providers don't declare it in their own UpdateParams.
 type updateFields struct {
 	serviceFields
-	Pause *bool `json:"pause"`
-	backupsFields
+	Pause   *bool                 `json:"pause"`
+	Backups *model.ServiceBackups `json:"backups,omitempty"`
 }
 
 // createBody is the create payload: the service fields plus the provider's own
@@ -138,6 +131,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			TeamID:          fields.TeamID,
 			CustomSubdomain: fields.CustomSubdomain,
 			Pause:           fields.Pause,
+			Backups:         fields.Backups,
 			Params:          args,
 		}); err != nil {
 			HandleError(c, err)
