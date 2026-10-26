@@ -24,6 +24,7 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 	Details Details              `json:"details"`
 	Pause   *bool                `json:"pause,omitempty"`
 	Error   *string              `json:"error,omitempty"`
+	Backups *ServiceBackups      `json:"backups,omitempty"`
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
@@ -36,6 +37,16 @@ type RecoverFrom struct {
 	Time    *time.Time         `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
 	Config  BackupStoreConfig  `json:"config"`
 	Secrets BackupStoreSecrets `json:"secrets"`
+}
+
+// ServiceBackups is the contract's service-level backups section
+type ServiceBackups struct {
+	// Enabled is reconciled by Codesphere in one direction only: a change from
+	// true to false is sent on update, and the provider must stop backing up the
+	// service (existing backups are kept). Codesphere never sends true to turn
+	// backups back on, so true or nil on update is a no-op. In status it reports
+	// whether the service is currently backed up.
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // BackupStatus is the backup-status response contract expected by Codesphere:

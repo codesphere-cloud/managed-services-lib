@@ -29,8 +29,9 @@ type UpdateRequest[UpdateParams any] struct {
 	ID              model.ServiceID
 	TeamID          int
 	CustomSubdomain *string
-	Pause           *bool
+	Pause           *bool // nil = leave as is
 	Params          UpdateParams
+	Backups         *model.ServiceBackups // nil = leave backups as is
 }
 
 // BackupRequest is a decoded backup call. The same shape serves taking, polling

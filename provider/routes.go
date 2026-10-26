@@ -28,7 +28,8 @@ type serviceFields struct {
 // passes it to Update; providers don't declare it in their own UpdateParams.
 type updateFields struct {
 	serviceFields
-	Pause *bool `json:"pause"`
+	Pause   *bool                 `json:"pause"`
+	Backups *model.ServiceBackups `json:"backups,omitempty"`
 }
 
 // createBody is the create payload: the service fields plus the provider's own
@@ -130,6 +131,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			TeamID:          fields.TeamID,
 			CustomSubdomain: fields.CustomSubdomain,
 			Pause:           fields.Pause,
+			Backups:         fields.Backups,
 			Params:          args,
 		}); err != nil {
 			HandleError(c, err)
