@@ -24,6 +24,7 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 	Details Details              `json:"details"`
 	Pause   *bool                `json:"pause,omitempty"`
 	Error   *string              `json:"error,omitempty"`
+	Backups *ServiceBackups      `json:"backups,omitempty"`
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
@@ -36,6 +37,12 @@ type RecoverFrom struct {
 	Time    *time.Time         `json:"time,omitempty" binding:"required_with=MsID,excluded_without=MsID"`
 	Config  BackupStoreConfig  `json:"config"`
 	Secrets BackupStoreSecrets `json:"secrets"`
+}
+
+// ServiceBackups is the contract's service-level backups section, shared by the
+// update payload and the status response.
+type ServiceBackups struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // BackupStatus is the backup-status response contract expected by Codesphere:
