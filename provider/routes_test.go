@@ -299,10 +299,13 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated[0].Backups.Enabled).To(HaveValue(BeTrue()))
 		})
 
-		It("leaves backups nil when the request omits them", func() {
+		It("distinguishes disabling backups from leaving them alone", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "backups": {"enabled": false}}`)
 			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
 
-			Expect(p.updated[0].Backups).To(BeNil())
+			Expect(p.updated).To(HaveLen(2))
+			Expect(p.updated[0].Backups).To(HaveField("Enabled", HaveValue(BeFalse())))
+			Expect(p.updated[1].Backups).To(BeNil())
 		})
 
 		It("leaves backups.enabled nil when the backups section is empty", func() {
