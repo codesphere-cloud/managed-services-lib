@@ -80,22 +80,32 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 }
 
 // NewServiceStatus assembles a ServiceStatus, wrapping plan in the contract's
-// plan.parameters envelope.
+// plan.parameters envelope. Pass nil health if it can't be determined. Health
+// is dropped while the service is paused, and its message is cut to
+// model.HealthMessageMaxLen.
 func NewServiceStatus[PlanParams, Config, Details any](
 	plan PlanParams,
 	config Config,
 	details Details,
 	pause *bool,
 	err *string,
-
+	health *model.Health,
 ) model.ServiceStatus[PlanParams, Config, Details] {
-	return model.ServiceStatus[PlanParams, Config, Details]{
+	status := model.ServiceStatus[PlanParams, Config, Details]{
 		Plan:    model.PlanSpec[PlanParams]{Parameters: plan},
 		Config:  config,
 		Details: details,
 		Pause:   pause,
 		Error:   err,
 	}
+	if health != nil && (pause == nil || !*pause) {
+		h := *health
+		if msg := []rune(h.Message); len(msg) > model.HealthMessageMaxLen {
+			h.Message = string(msg[:model.HealthMessageMaxLen])
+		}
+		status.Conditions = &model.Conditions{Health: &h}
+	}
+	return status
 }
 
 // Backups is the optional backup capability, kept separate from Provider so a

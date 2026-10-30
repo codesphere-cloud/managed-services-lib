@@ -19,12 +19,45 @@ type PlanSpec[Params any] struct {
 // ServiceStatus is the per-service value of the status response. Build it with
 // NewServiceStatus, which applies the contract's plan.parameters wrapper.
 type ServiceStatus[PlanParams, Config, Details any] struct {
-	Plan    PlanSpec[PlanParams] `json:"plan"`
-	Config  Config               `json:"config"`
-	Details Details              `json:"details"`
-	Pause   *bool                `json:"pause,omitempty"`
-	Error   *string              `json:"error,omitempty"`
-	Backups *ServiceBackups      `json:"backups,omitempty"`
+	Plan       PlanSpec[PlanParams] `json:"plan"`
+	Config     Config               `json:"config"`
+	Details    Details              `json:"details"`
+	Pause      *bool                `json:"pause,omitempty"`
+	Error      *string              `json:"error,omitempty"`
+	Backups    *ServiceBackups      `json:"backups,omitempty"`
+	Conditions *Conditions          `json:"conditions,omitempty"`
+	// Utilization is the current usage of each resource parameter the provider
+	// declares with reportsUtilization, keyed by the parameter name and in its
+	// unit. Leave a key out if its usage can't be determined.
+	Utilization map[string]float64 `json:"utilization,omitempty"`
+}
+
+// HealthStatus says whether the service currently works for its users,
+// independent of whether its requested configuration is applied.
+type HealthStatus string
+
+const (
+	HealthHealthy   HealthStatus = "healthy"
+	HealthDegraded  HealthStatus = "degraded"
+	HealthUnhealthy HealthStatus = "unhealthy"
+	HealthUnknown   HealthStatus = "unknown"
+)
+
+// HealthMessageMaxLen is the longest message Codesphere accepts; a longer one
+// makes it drop the whole health report.
+const HealthMessageMaxLen = 500
+
+// Health is the contract's conditions.health. Message says what is wrong and
+// is shown to the user as is.
+type Health struct {
+	Status  HealthStatus `json:"status"`
+	Message string       `json:"message,omitempty"`
+}
+
+// Conditions are signals about the service beyond its configuration.
+type Conditions struct {
+	// Health is omitted while the service is paused.
+	Health *Health `json:"health,omitempty"`
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new
