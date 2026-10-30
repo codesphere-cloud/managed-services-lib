@@ -344,6 +344,7 @@ var _ = Describe("Routes", func() {
 				fakeDetails{Ready: true},
 				nil,
 				nil,
+				nil,
 			)
 
 			Expect(status.Plan.Parameters).To(Equal(fakeParams{Storage: 1000}))
@@ -355,6 +356,7 @@ var _ = Describe("Routes", func() {
 					fakeParams{Storage: 1000},
 					fakeConfig{Version: "14.2"},
 					fakeDetails{Hostname: "10.0.0.5", Ready: true},
+					nil,
 					nil,
 					nil,
 				),
@@ -371,8 +373,8 @@ var _ = Describe("Routes", func() {
 		})
 
 		It("reports pause at the top level of the status response", func() {
-			paused := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(true), nil)
-			running := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(false), nil)
+			paused := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(true), nil, nil)
+			running := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, new(false), nil, nil)
 			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
 				"svc-1": paused,
 				"svc-2": running,
@@ -388,9 +390,9 @@ var _ = Describe("Routes", func() {
 		})
 
 		It("reports backups at the top level of the status response", func() {
-			enabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil)
+			enabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil)
 			enabled.Backups = &model.ServiceBackups{Enabled: new(true)}
-			disabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil)
+			disabled := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil)
 			disabled.Backups = &model.ServiceBackups{Enabled: new(false)}
 			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
 				"svc-1": enabled,
@@ -406,9 +408,38 @@ var _ = Describe("Routes", func() {
 			Expect(string(got["svc-2"]["backups"])).To(MatchJSON(`{"enabled":false}`))
 		})
 
+		It("reports health and utilization in the status response", func() {
+			status := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil,
+				&model.Health{Status: model.HealthDegraded, Message: "1 of 3 replicas down"})
+			status.Utilization = map[string]float64{"storage": 512}
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+				"svc-1": status,
+			}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
+
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(string(got["svc-1"]["conditions"])).To(MatchJSON(`{"health":{"status":"degraded","message":"1 of 3 replicas down"}}`))
+			Expect(string(got["svc-1"]["utilization"])).To(MatchJSON(`{"storage":512}`))
+		})
+
+		It("omits conditions and utilization when the provider does not set them", func() {
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
+				"svc-1": provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil),
+			}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
+
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(got["svc-1"]).NotTo(HaveKey("conditions"))
+			Expect(got["svc-1"]).NotTo(HaveKey("utilization"))
+		})
+
 		It("omits backups from the status response when the provider does not set them", func() {
 			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
-				"svc-1": provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil),
+				"svc-1": provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil),
 			}
 
 			w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
