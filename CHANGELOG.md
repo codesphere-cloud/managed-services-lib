@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.10.0...v0.11.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* report health and utilization in the service status ([#46](https://github.com/codesphere-cloud/managed-services-lib/issues/46))
+
+### Features
+
+* Add a service level `ServiceBackups` component ([#43](https://github.com/codesphere-cloud/managed-services-lib/issues/43)) ([ab4de9c](https://github.com/codesphere-cloud/managed-services-lib/commit/ab4de9c4650e8bca748983cb4e9850b03d313b57))
+* report health and utilization in the service status ([#46](https://github.com/codesphere-cloud/managed-services-lib/issues/46)) ([a641e63](https://github.com/codesphere-cloud/managed-services-lib/commit/a641e63e1ec68ebf147bb15f32a17ea92bb4fd16))
+
 ## [0.10.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.9.0...v0.10.0) (2026-10-15)
 
 
