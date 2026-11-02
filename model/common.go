@@ -43,8 +43,7 @@ const (
 	HealthUnknown   HealthStatus = "unknown"
 )
 
-// HealthMessageMaxLen is the longest message Codesphere accepts; a longer one
-// makes it drop the whole health report.
+// HealthMessageMaxLen is the longest message Codesphere accepts.
 const HealthMessageMaxLen = 500
 
 // Health is the contract's conditions.health. Message says what is wrong and
