@@ -5,6 +5,7 @@ package provider_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -139,6 +140,7 @@ var _ = Describe("Provider API Contract", func() {
 				MockDetails{Ready: true},
 				new(false),
 				nil,
+				nil,
 			)
 
 			Expect(status.Plan.Parameters.Replicas).To(Equal(3))
@@ -147,6 +149,28 @@ var _ = Describe("Provider API Contract", func() {
 
 			Expect(*status.Pause).To(BeFalse())
 			Expect(status.Error).To(BeNil())
+			Expect(status.Conditions).To(BeNil())
+		})
+
+		It("reports health while running", func() {
+			status := provider.NewServiceStatus(MockPlan{}, MockConfig{}, MockDetails{}, new(false), nil,
+				&model.Health{Status: model.HealthHealthy})
+
+			Expect(status.Conditions.Health).To(Equal(&model.Health{Status: model.HealthHealthy}))
+		})
+
+		It("drops health while paused", func() {
+			status := provider.NewServiceStatus(MockPlan{}, MockConfig{}, MockDetails{}, new(true), nil,
+				&model.Health{Status: model.HealthUnhealthy})
+
+			Expect(status.Conditions).To(BeNil())
+		})
+
+		It("cuts a too long health message to the accepted length", func() {
+			status := provider.NewServiceStatus(MockPlan{}, MockConfig{}, MockDetails{}, nil, nil,
+				&model.Health{Status: model.HealthUnhealthy, Message: strings.Repeat("ä", model.HealthMessageMaxLen+10)})
+
+			Expect([]rune(status.Conditions.Health.Message)).To(HaveLen(model.HealthMessageMaxLen))
 		})
 	})
 })

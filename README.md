@@ -58,13 +58,17 @@ the contract's own fields or envelopes yourself:
 | `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
 | `msId` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
-| the `{plan, config, details, pause}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
+| the `{plan, config, details, pause, conditions, utilization}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
 | HTTP status codes and error mapping | |
 
 `PATCH` bodies are partial, so make `UpdateParams` fields pointers to tell "not sent" from "sent
 empty". 
 
-Build status values with `provider.NewServiceStatus(plan, config, details, pause, error)`
+Build status values with `provider.NewServiceStatus(plan, config, details, pause, error, health)`.
+`health` says whether the service works for its users (`healthy`, `degraded`, `unhealthy`,
+`unknown`, plus an optional message); pass `nil` if you can't tell. It is dropped while the
+service is paused. Set `Utilization` on the result for the resource parameters you declare with
+`reportsUtilization`.
 
 Embed `provider.Base` for the shared dependencies (Kubernetes client, logger) and helpers.
 
