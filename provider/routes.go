@@ -203,6 +203,21 @@ func RegisterBackupRoutes(
 	})
 }
 
+// RegisterMaintenanceRoutes mounts the maintenance endpoint.
+func RegisterMaintenanceRoutes(
+	group *gin.RouterGroup,
+	m Maintenance,
+) {
+	// POST /:id/maintenance - Apply the pending maintenance
+	group.POST("/:id/maintenance", func(c *gin.Context) {
+		if err := m.ApplyMaintenance(c.Request.Context(), model.ServiceID(c.Param("id"))); err != nil {
+			HandleError(c, err)
+			return
+		}
+		c.Status(http.StatusAccepted)
+	})
+}
+
 func parseBackup(c *gin.Context) (BackupRequest, error) {
 	var body backupBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -239,6 +254,12 @@ func HandleError(c *gin.Context, err error) {
 	case errors.Is(err, ErrNamespaceNotFound):
 		slog.Warn("client error", "error", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, ErrConflict):
+		slog.Warn("client error", "error", err)
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, ErrServiceUnavailable):
+		slog.Warn("client error", "error", err)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 	case errors.Is(err, ErrNotImplemented):
 		slog.Warn("client error", "error", err)
 		c.JSON(http.StatusNotImplemented, gin.H{"error": err.Error()})

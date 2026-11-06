@@ -120,3 +120,15 @@ type Backups interface {
 	// DeleteBackup deletes a backup.
 	DeleteBackup(ctx context.Context, req BackupRequest) error
 }
+
+// Maintenance is the optional capability to apply what a service's status
+// lists under maintenance, kept separate from Provider so a provider opts in
+// by implementing it.
+type Maintenance interface {
+	// ApplyMaintenance starts applying every pending maintenance item of the
+	// service at once and returns before the rollout finishes. It does nothing
+	// if nothing is pending. Return ErrServiceUnavailable while the service is
+	// not healthy enough for the rollout, and ErrConflict if it is busy or
+	// changed meanwhile.
+	ApplyMaintenance(ctx context.Context, id model.ServiceID) error
+}
