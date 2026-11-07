@@ -46,7 +46,7 @@ var (
 	ErrConflict = errors.New("conflict")
 
 	// ErrServiceUnavailable is returned when the service is not in a state to
-	// carry out the request, e.g. not healthy enough to roll out maintenance.
+	// carry out the request.
 	ErrServiceUnavailable = errors.New("service unavailable")
 )
 
