@@ -30,9 +30,8 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 	// declares with reportsUtilization, keyed by the parameter name and in its
 	// unit. Leave a key out if its usage can't be determined.
 	Utilization map[string]float64 `json:"utilization,omitempty"`
-	// Maintenance is what applying maintenance would do. A provider that
-	// implements provider.Maintenance reports an empty list when nothing is
-	// pending; nil leaves the field out, i.e. maintenance isn't supported.
+	// A provider that implements provider.Maintenance reports an empty list when
+	// nothing is pending; nil leaves the field out, i.e. maintenance isn't supported.
 	Maintenance []MaintenanceItem `json:"maintenance,omitzero"`
 }
 
