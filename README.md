@@ -58,7 +58,7 @@ the contract's own fields or envelopes yourself:
 | `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
 | `msId` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
-| the `{plan, config, details, pause, conditions, utilization}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
+| the `{plan, config, details, pause, conditions, utilization, maintenance}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
 | HTTP status codes and error mapping | |
 
 `PATCH` bodies are partial, so make `UpdateParams` fields pointers to tell "not sent" from "sent
@@ -89,6 +89,21 @@ point-in-time recovery, a source `MsID` and `Time`. Both are validated against t
 tags before your provider is called. A provider that supports backups implements `Backups` and
 calls `RegisterBackupRoutes`.
 
+Maintenance is opt-in the same way:
+
+```go
+type Maintenance interface {
+	ApplyMaintenance(ctx context.Context, id model.ServiceID) error
+}
+```
+
+A provider that implements it sets `Maintenance` on every status it returns, to an empty list when
+nothing is pending, and calls `RegisterMaintenanceRoutes`. Each pending `model.MaintenanceItem` has
+a user-facing `Description` that says how the service is disrupted. `POST /{id}/maintenance` applies
+all of them at once and answers `202` before the rollout finishes; return `ErrServiceUnavailable`
+(`503`) while the service is not healthy enough for it, and `ErrConflict` (`409`) while it is busy
+or changed meanwhile.
+
 ## Wiring
 
 ```go
@@ -101,6 +116,7 @@ routes := map[string]func(*gin.RouterGroup){
 		p := mysvc.NewProvider(k8s, logger)
 		provider.RegisterRoutes(g, p)       // CRUD
 		provider.RegisterBackupRoutes(g, p) // backups
+		provider.RegisterMaintenanceRoutes(g, p) // maintenance
 	},
 }
 
@@ -108,7 +124,7 @@ server, _ := api.NewServer(cfg, routes)
 server.Run()
 ```
 
-`RegisterRoutes` mounts the CRUD endpoints under `/api/v1/{name}`; `RegisterBackupRoutes` adds the `/backups` endpoints for providers that implement `Backups`.
+`RegisterRoutes` mounts the CRUD endpoints under `/api/v1/{name}`; `RegisterBackupRoutes` adds the `/backups` endpoints for providers that implement `Backups`, and `RegisterMaintenanceRoutes` adds `/{id}/maintenance` for those that implement `Maintenance`.
 
 ## Detached Jobs
 

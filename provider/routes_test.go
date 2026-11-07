@@ -6,6 +6,7 @@ package provider_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -56,7 +57,10 @@ type fakeProvider struct {
 	updated  []updateCall
 	deleted  []model.ServiceID
 	backedUp []backupCall
-	status   map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
+	// maintained records the ApplyMaintenance calls, which fail with maintenanceErr
+	maintained     []model.ServiceID
+	maintenanceErr error
+	status         map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]
 }
 
 func (f *fakeProvider) Create(_ context.Context, req createCall) error {
@@ -95,6 +99,11 @@ func (f *fakeProvider) DeleteBackup(_ context.Context, _ backupCall) error {
 	return nil
 }
 
+func (f *fakeProvider) ApplyMaintenance(_ context.Context, id model.ServiceID) error {
+	f.maintained = append(f.maintained, id)
+	return f.maintenanceErr
+}
+
 const backupStoreJSON = `"config": {"type": "s3", "endpointUrl": "https://s3.example.com", "bucket": "b", "accessKeyId": "k"}, "secrets": {"secretKey": "s"}`
 
 var backupStoreConfig = model.BackupStoreConfig{Type: "s3", EndpointURL: "https://s3.example.com", Bucket: "b", AccessKeyID: "k"}
@@ -125,6 +134,7 @@ var _ = Describe("Routes", func() {
 		group := router.Group("/api/v1/fake")
 		provider.RegisterRoutes(group, p)
 		provider.RegisterBackupRoutes(group, p)
+		provider.RegisterMaintenanceRoutes(group, p)
 	})
 
 	Describe("POST /", func() {
@@ -435,7 +445,26 @@ var _ = Describe("Routes", func() {
 			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
 			Expect(got["svc-1"]).NotTo(HaveKey("conditions"))
 			Expect(got["svc-1"]).NotTo(HaveKey("utilization"))
+			Expect(got["svc-1"]).NotTo(HaveKey("maintenance"))
 		})
+
+		DescribeTable("reports the maintenance set by the provider in the status response",
+			func(maintenance []model.MaintenanceItem, want string) {
+				status := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil)
+				status.Maintenance = maintenance
+				p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{"svc-1": status}
+
+				w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
+
+				var got map[string]map[string]json.RawMessage
+				Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+				Expect(string(got["svc-1"]["maintenance"])).To(MatchJSON(want))
+			},
+			Entry("nothing pending", []model.MaintenanceItem{}, `[]`),
+			Entry("pending items",
+				[]model.MaintenanceItem{{Status: model.MaintenancePending, Description: "Nodes restart one at a time."}},
+				`[{"status":"pending","description":"Nodes restart one at a time."}]`),
+		)
 
 		It("omits backups from the status response when the provider does not set them", func() {
 			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
@@ -502,6 +531,35 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusOK))
 			Expect(w.Body.String()).To(MatchJSON(`{"exists":true}`))
+		})
+	})
+
+	Describe("POST /:id/maintenance", func() {
+		It("applies the maintenance of the service in the path and accepts", func() {
+			w := do(http.MethodPost, "/api/v1/fake/svc-1/maintenance", "")
+
+			Expect(w.Code).To(Equal(http.StatusAccepted))
+			Expect(p.maintained).To(Equal([]model.ServiceID{"svc-1"}))
+		})
+
+		DescribeTable("maps the provider's error",
+			func(err error, code int) {
+				p.maintenanceErr = err
+
+				w := do(http.MethodPost, "/api/v1/fake/svc-1/maintenance", "")
+
+				Expect(w.Code).To(Equal(code))
+			},
+			Entry("unknown service", provider.ErrServiceNotFound, http.StatusNotFound),
+			Entry("busy or changed service", fmt.Errorf("%w: backup running", provider.ErrConflict), http.StatusConflict),
+			Entry("unhealthy service", fmt.Errorf("%w: red", provider.ErrServiceUnavailable), http.StatusServiceUnavailable),
+		)
+
+		It("keeps the backup routes reachable next to it", func() {
+			w := do(http.MethodPost, "/api/v1/fake/backups/backup-1/status", `{"msId": "svc-1", "teamId": 7, `+backupStoreJSON+`}`)
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			Expect(p.maintained).To(BeEmpty())
 		})
 	})
 })

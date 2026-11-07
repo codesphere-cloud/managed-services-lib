@@ -30,6 +30,9 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 	// declares with reportsUtilization, keyed by the parameter name and in its
 	// unit. Leave a key out if its usage can't be determined.
 	Utilization map[string]float64 `json:"utilization,omitempty"`
+	// A provider that implements provider.Maintenance reports an empty list when
+	// nothing is pending; nil leaves the field out, i.e. maintenance isn't supported.
+	Maintenance []MaintenanceItem `json:"maintenance,omitzero"`
 }
 
 // HealthStatus says whether the service currently works for its users,
@@ -57,6 +60,18 @@ type Health struct {
 type Conditions struct {
 	// Health is omitted while the service is paused.
 	Health *Health `json:"health,omitempty"`
+}
+
+// MaintenanceStatus is the state of a MaintenanceItem.
+type MaintenanceStatus string
+
+const MaintenancePending MaintenanceStatus = "pending"
+
+// MaintenanceItem is one entry of the status' maintenance list. Description is
+// shown to the user as is and should say how the service is disrupted.
+type MaintenanceItem struct {
+	Status      MaintenanceStatus `json:"status"`
+	Description string            `json:"description"`
 }
 
 // RecoverFrom, sent only on create, asks the provider to restore the new

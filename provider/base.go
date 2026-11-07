@@ -40,6 +40,14 @@ var (
 	ErrNamespaceNotFound = errors.New("namespace not found")
 
 	ErrNotImplemented = errors.New("not implemented")
+
+	// ErrConflict is returned when the service is busy with another operation
+	// or changed while the request was handled, so retrying later can succeed.
+	ErrConflict = errors.New("conflict")
+
+	// ErrServiceUnavailable is returned when the service is not in a state to
+	// carry out the request.
+	ErrServiceUnavailable = errors.New("service unavailable")
 )
 
 // KubernetesClient is an alias for the client interface used by providers.
