@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.11.0...v0.12.0) (2026-11-07)
+
+
+### Features
+
+* report and apply maintenance through the contract ([#48](https://github.com/codesphere-cloud/managed-services-lib/issues/48)) ([e1493ea](https://github.com/codesphere-cloud/managed-services-lib/commit/e1493eac95b3a20892f98a34c2fdf03b48071b7f))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/onsi/ginkgo/v2 to v2.34.0 ([#47](https://github.com/codesphere-cloud/managed-services-lib/issues/47)) ([b6cb56c](https://github.com/codesphere-cloud/managed-services-lib/commit/b6cb56c8f85c9cf7c2e85af62456bb18a58bfcab))
+
 ## [0.11.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.10.0...v0.11.0) (2026-11-02)
 
 
