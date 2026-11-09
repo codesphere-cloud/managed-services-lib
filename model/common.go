@@ -33,6 +33,8 @@ type ServiceStatus[PlanParams, Config, Details any] struct {
 	// A provider that implements provider.Maintenance reports an empty list when
 	// nothing is pending; nil leaves the field out, i.e. maintenance isn't supported.
 	Maintenance []MaintenanceItem `json:"maintenance,omitzero"`
+	// Version is the service's key of the provider's versions; empty leaves it out.
+	Version string `json:"version,omitempty"`
 }
 
 // HealthStatus says whether the service currently works for its users,
