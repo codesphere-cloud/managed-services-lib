@@ -21,6 +21,8 @@ type serviceFields struct {
 	ID              model.ServiceID `json:"id" binding:"required"`
 	TeamID          int             `json:"teamId" binding:"gt=0"`
 	CustomSubdomain *string         `json:"customSubdomain"`
+	// Version is a key of the provider's versions; the provider validates it.
+	Version *string `json:"version"`
 }
 
 // updateFields are the service-level fields on an update payload. Pause is a
@@ -96,6 +98,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			ID:              body.ID,
 			TeamID:          body.TeamID,
 			CustomSubdomain: body.CustomSubdomain,
+			Version:         body.Version,
 			Plan:            body.Plan.Parameters,
 			Config:          body.Config,
 			Secrets:         body.Secrets,
@@ -131,6 +134,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			TeamID:          fields.TeamID,
 			CustomSubdomain: fields.CustomSubdomain,
 			Pause:           fields.Pause,
+			Version:         fields.Version,
 			Backups:         fields.Backups,
 			Params:          args,
 		}); err != nil {

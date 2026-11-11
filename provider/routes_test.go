@@ -170,6 +170,15 @@ var _ = Describe("Routes", func() {
 			Expect(p.created[0].Secrets).To(Equal(fakeSecrets{Password: "super-secret-password"}))
 		})
 
+		It("decodes the top-level version apart from the provider's config", func() {
+			do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1", "teamId": 7, "version": "1.0.0", "config": {"version": "14.2"}}`)
+			do(http.MethodPost, "/api/v1/fake", body)
+
+			Expect(p.created[0].Version).To(HaveValue(Equal("1.0.0")))
+			Expect(p.created[0].Config).To(Equal(fakeConfig{Version: "14.2"}))
+			Expect(p.created[1].Version).To(BeNil())
+		})
+
 		It("rejects a malformed body", func() {
 			w := do(http.MethodPost, "/api/v1/fake", `{"plan": "not-an-object"}`)
 
@@ -292,6 +301,15 @@ var _ = Describe("Routes", func() {
 			Expect(p.updated).To(HaveLen(2))
 			Expect(p.updated[0].Pause).To(HaveValue(BeFalse()))
 			Expect(p.updated[1].Pause).To(BeNil())
+		})
+
+		It("distinguishes a version change from leaving the version alone", func() {
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7, "version": "1.1.0"}`)
+			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
+
+			Expect(p.updated).To(HaveLen(2))
+			Expect(p.updated[0].Version).To(HaveValue(Equal("1.1.0")))
+			Expect(p.updated[1].Version).To(BeNil())
 		})
 
 		It("decodes backups.enabled=false as a contract field", func() {
@@ -434,6 +452,18 @@ var _ = Describe("Routes", func() {
 			Expect(string(got["svc-1"]["utilization"])).To(MatchJSON(`{"storage":512}`))
 		})
 
+		It("reports the version set by the provider at the top level of the status response", func() {
+			status := provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil)
+			status.Version = "1.0.0"
+			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{"svc-1": status}
+
+			w := do(http.MethodGet, "/api/v1/fake?id=svc-1", "")
+
+			var got map[string]map[string]json.RawMessage
+			Expect(json.Unmarshal(w.Body.Bytes(), &got)).To(Succeed())
+			Expect(string(got["svc-1"]["version"])).To(MatchJSON(`"1.0.0"`))
+		})
+
 		It("omits conditions and utilization when the provider does not set them", func() {
 			p.status = map[model.ServiceID]model.ServiceStatus[fakeParams, fakeConfig, fakeDetails]{
 				"svc-1": provider.NewServiceStatus(fakeParams{}, fakeConfig{}, fakeDetails{}, nil, nil, nil),
@@ -446,6 +476,7 @@ var _ = Describe("Routes", func() {
 			Expect(got["svc-1"]).NotTo(HaveKey("conditions"))
 			Expect(got["svc-1"]).NotTo(HaveKey("utilization"))
 			Expect(got["svc-1"]).NotTo(HaveKey("maintenance"))
+			Expect(got["svc-1"]).NotTo(HaveKey("version"))
 		})
 
 		DescribeTable("reports the maintenance set by the provider in the status response",

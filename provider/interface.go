@@ -17,6 +17,7 @@ type CreateRequest[PlanParams, Config, Secrets any] struct {
 	ID              model.ServiceID
 	TeamID          int
 	CustomSubdomain *string
+	Version         *string // nil = not sent
 	Plan            PlanParams
 	Config          Config
 	Secrets         Secrets
@@ -29,7 +30,8 @@ type UpdateRequest[UpdateParams any] struct {
 	ID              model.ServiceID
 	TeamID          int
 	CustomSubdomain *string
-	Pause           *bool // nil = leave as is
+	Pause           *bool   // nil = leave as is
+	Version         *string // nil = leave as is
 	Params          UpdateParams
 	Backups         *model.ServiceBackups // nil = leave backups as is
 }
