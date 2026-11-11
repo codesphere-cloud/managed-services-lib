@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.13.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.12.0...v0.13.0) (2026-11-11)
+
+
+### Features
+
+* decode and report the contract's top-level version ([#51](https://github.com/codesphere-cloud/managed-services-lib/issues/51)) ([e1ced11](https://github.com/codesphere-cloud/managed-services-lib/commit/e1ced11e63faef17d47c48dfe71372484dea03ca))
+
+
+### Bug Fixes
+
+* **deps:** update kubernetes monorepo to v0.37.2 ([#45](https://github.com/codesphere-cloud/managed-services-lib/issues/45)) ([04b3541](https://github.com/codesphere-cloud/managed-services-lib/commit/04b3541bb43b30d236d40d397df54f9e080d3526))
+
 ## [0.12.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.11.0...v0.12.0) (2026-11-07)
 
 
