@@ -60,6 +60,35 @@ var _ = Describe("Service job core", func() {
 			Expect(spec.Labels).To(HaveKeyWithValue(model.BackupIDLabel, "bkp-7"))
 		})
 
+		It("stamps the sanitized service name when set", func() {
+			name := "My Service"
+			spec := provider.ServiceJobSpec(provider.ServiceJob{
+				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7", MsName: &name,
+			})
+
+			Expect(spec.Labels).To(HaveKeyWithValue(model.NameLabel, "My-Service"))
+		})
+
+		It("omits the name label when the name is unset or has no usable characters", func() {
+			empty := "___"
+			for _, name := range []*string{nil, &empty} {
+				spec := provider.ServiceJobSpec(provider.ServiceJob{
+					Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7", MsName: name,
+				})
+				Expect(spec.Labels).NotTo(HaveKey(model.NameLabel))
+			}
+		})
+
+		It("does not let caller labels override the name label", func() {
+			name := "my-service"
+			spec := provider.ServiceJobSpec(provider.ServiceJob{
+				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7", MsName: &name,
+				Labels: map[string]string{model.NameLabel: "hijack"},
+			})
+
+			Expect(spec.Labels).To(HaveKeyWithValue(model.NameLabel, "my-service"))
+		})
+
 		It("passes image pull secrets through", func() {
 			spec := provider.ServiceJobSpec(provider.ServiceJob{
 				Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7",

@@ -45,6 +45,9 @@ type ServiceJob struct {
 	// MsID is the service the job acts on. It is always stamped as ServiceIDLabel
 	// so the Job is discoverable and cleaned up with the service.
 	MsID string
+	// MsName is the user-facing service name. When set, it is stamped (sanitized)
+	// as NameLabel so the Job is identifiable by name in observability tooling.
+	MsName *string
 	// Key uniquely identifies the job within its Operation, becoming the Job name
 	// suffix and idempotency key. Use the backup ID for per-backup operations, or
 	// the MsID for whole-service operations (e.g. restore).
@@ -86,6 +89,11 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 	// Identity labels are authoritative — set them last so caller labels cannot
 	// override them.
 	labels[model.ServiceIDLabel] = j.MsID
+	if j.MsName != nil {
+		if v := model.NameLabelValue(*j.MsName); v != "" {
+			labels[model.NameLabel] = v
+		}
+	}
 	if keyLabel := operationKeyLabels[j.Operation]; keyLabel != "" {
 		labels[keyLabel] = j.Key
 	}

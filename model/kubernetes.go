@@ -4,6 +4,9 @@
 package model
 
 import (
+	"regexp"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -112,6 +115,9 @@ const (
 	// ServiceIDLabel is the label key for the managed service ID.
 	ServiceIDLabel = LabelPrefix + "/id"
 
+	// NameLabel is the label key for the managed service name.
+	NameLabel = LabelPrefix + "/name"
+
 	// BackupIDLabel is the label key for a backup ID. Applied to backup Jobs
 	// (alongside ServiceIDLabel) so a service's backups are discoverable.
 	BackupIDLabel = LabelPrefix + "/backup-id"
@@ -122,3 +128,26 @@ const (
 	// TeamIDLabel is the label key for the Codesphere team ID.
 	TeamIDLabel = LabelPrefix + "/team-id"
 )
+
+// maxLabelValueLength is the Kubernetes limit for label values.
+const maxLabelValueLength = 63
+
+var invalidLabelValueChars = regexp.MustCompile(`[^A-Za-z0-9_.-]+`)
+
+// NameLabelValue turns a user-facing service name into a valid label value for
+// NameLabel.
+//
+// Characters outside [A-Za-z0-9_.-] become "-", then the result is cut to 63
+// characters, then finally stripped of leading/trailing non-alphanumerics.
+//
+// The label is for display (e.g. in observability), so a lossy mapping is fine; never look a
+// service up by it, use ServiceIDLabel for that.
+func NameLabelValue(name string) string {
+	v := invalidLabelValueChars.ReplaceAllString(name, "-")
+	if len(v) > maxLabelValueLength {
+		v = v[:maxLabelValueLength]
+	}
+	return strings.TrimFunc(v, func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
+	})
+}
