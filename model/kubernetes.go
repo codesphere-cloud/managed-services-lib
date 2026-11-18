@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 // APIResource identifies a Kubernetes API resource.
@@ -129,20 +130,12 @@ const (
 	TeamIDLabel = LabelPrefix + "/team-id"
 )
 
-// maxLabelValueLength is the Kubernetes limit for label values.
-const maxLabelValueLength = 63
-
 var invalidLabelValueChars = regexp.MustCompile(`[^A-Za-z0-9_.-]+`)
 
-// NameLabelValue turns a user-facing service name into a valid label value for
-// NameLabel.
-//
-// Characters outside [A-Za-z0-9_.-] become "-", then the result is cut to 63
-// characters, then finally stripped of leading/trailing non-alphanumerics.
-func NameLabelValue(name string) string {
+func SanitizeLabelValue(name string) string {
 	v := invalidLabelValueChars.ReplaceAllString(name, "-")
-	if len(v) > maxLabelValueLength {
-		v = v[:maxLabelValueLength]
+	if len(v) > validation.LabelValueMaxLength {
+		v = v[:validation.LabelValueMaxLength]
 	}
 	// After the replacement, "-", "_" and "." are the only non-alphanumerics left.
 	return strings.Trim(v, "-_.")

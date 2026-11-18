@@ -94,7 +94,7 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 	// so a missing or unusable name leaves no label rather than a caller's.
 	delete(labels, model.NameLabel)
 	if j.MsName != nil {
-		if v := model.NameLabelValue(*j.MsName); v != "" {
+		if v := model.SanitizeLabelValue(*j.MsName); v != "" {
 			labels[model.NameLabel] = v
 		}
 	}
