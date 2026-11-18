@@ -140,6 +140,7 @@ var _ = Describe("Routes", func() {
 	Describe("POST /", func() {
 		const body = `{
 			"id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+			"name": "my-service",
 			"teamId": 7,
 			"customSubdomain": "my-db",
 			"plan": {"parameters": {"storage": 1000}},
@@ -155,6 +156,15 @@ var _ = Describe("Routes", func() {
 			Expect(p.created[0].ID).To(Equal(model.ServiceID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")))
 			Expect(p.created[0].TeamID).To(Equal(7))
 			Expect(p.created[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
+			Expect(p.created[0].Name).To(HaveValue(Equal("my-service")))
+		})
+
+		It("leaves name nil when it is not sent", func() {
+			w := do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1", "teamId": 7}`)
+
+			Expect(w.Code).To(Equal(http.StatusCreated))
+			Expect(p.created).To(HaveLen(1))
+			Expect(p.created[0].Name).To(BeNil())
 		})
 
 		It("unwraps plan.parameters into the provider's params type", func() {
@@ -262,15 +272,23 @@ var _ = Describe("Routes", func() {
 	Describe("PATCH /:id", func() {
 		It("takes the ID from the path and decodes the service fields alongside the partial payload", func() {
 			w := do(http.MethodPatch, "/api/v1/fake/svc-1",
-				`{"id": "svc-1", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
+				`{"id": "svc-1", "name": "my-service", "teamId": 7, "customSubdomain": "my-db", "plan": {"parameters": {"storage": 2000}}}`)
 
 			Expect(w.Code).To(Equal(http.StatusNoContent))
 			Expect(p.updated).To(HaveLen(1))
 			Expect(p.updated[0].ID).To(Equal(model.ServiceID("svc-1")))
 			Expect(p.updated[0].TeamID).To(Equal(7))
 			Expect(p.updated[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
+			Expect(p.updated[0].Name).To(HaveValue(Equal("my-service")))
 			Expect(p.updated[0].Params.Plan).NotTo(BeNil())
 			Expect(p.updated[0].Params.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
+		})
+
+		It("leaves name nil when it is not sent", func() {
+			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
+
+			Expect(w.Code).To(Equal(http.StatusNoContent))
+			Expect(p.updated[0].Name).To(BeNil())
 		})
 
 		It("rejects a body whose id does not match the path", func() {

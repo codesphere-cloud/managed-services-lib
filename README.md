@@ -32,6 +32,7 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 ```go
 type CreateRequest[PlanParams, Config, Secrets any] struct {
 	ID              model.ServiceID
+	Name            *string // user-facing service name, nil if not sent
 	TeamID          int
 	CustomSubdomain *string
 	Plan            PlanParams // contents of plan.parameters
@@ -42,6 +43,7 @@ type CreateRequest[PlanParams, Config, Secrets any] struct {
 
 type UpdateRequest[UpdateParams any] struct {
 	ID              model.ServiceID
+	Name            *string // current service name, nil if not sent
 	TeamID          int
 	CustomSubdomain *string
 	Pause           *bool       // nil = leave as is
@@ -54,7 +56,7 @@ the contract's own fields or envelopes yourself:
 
 | The contract defines | You define |
 |---|---|
-| `id`, `teamId`, `customSubdomain`, `version` — fields on the request struct | `PlanParams` — contents of `plan.parameters` |
+| `id`, `name`, `teamId`, `customSubdomain`, `version` — fields on the request struct | `PlanParams` — contents of `plan.parameters` |
 | `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
 | `msId` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
