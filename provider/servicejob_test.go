@@ -76,6 +76,13 @@ var _ = Describe("Service job core", func() {
 					Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7", MsName: name,
 				})
 				Expect(spec.Labels).NotTo(HaveKey(model.NameLabel))
+
+				// A caller-set name label is dropped too, not kept as a fallback.
+				spec = provider.ServiceJobSpec(provider.ServiceJob{
+					Operation: provider.JobOpBackup, MsID: "svc-42", Key: "bkp-7", MsName: name,
+					Labels: map[string]string{model.NameLabel: "hijack"},
+				})
+				Expect(spec.Labels).NotTo(HaveKey(model.NameLabel))
 			}
 		})
 

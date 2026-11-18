@@ -62,8 +62,8 @@ type ServiceJob struct {
 	// owned Secret and injected via a secretKeyRef, so values never appear in the
 	// Job or Pod manifest.
 	Secrets map[string]string
-	// Labels are merged under the identity labels, which the caller cannot
-	// override.
+	// Labels are merged under the identity labels and NameLabel, which the
+	// caller cannot override.
 	Labels map[string]string
 	// ImagePullSecrets names Secrets used to pull Image from a private registry.
 	ImagePullSecrets []string
@@ -81,8 +81,8 @@ func ServiceJobName(operation, key string) string {
 // ServiceJobSpec applies the naming and identity-label conventions to build a
 // client.JobSpec. It always stamps ServiceIDLabel from MsID, and — for
 // operations with a registered key label (see operationKeyLabels) — the Key
-// under that label. Caller Labels ride along underneath and cannot override the
-// identity labels.
+// under that label. NameLabel is set only from MsName. Caller Labels ride along
+// underneath and cannot override the identity labels or NameLabel.
 func ServiceJobSpec(j ServiceJob) client.JobSpec {
 	labels := map[string]string{}
 	maps.Copy(labels, j.Labels)
@@ -90,12 +90,13 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 	// override them.
 	labels[model.ServiceIDLabel] = j.MsID
 
+	// NameLabel only ever comes from MsName: drop any caller-set value first,
+	// so a missing or unusable name leaves no label rather than a caller's.
+	delete(labels, model.NameLabel)
 	if j.MsName != nil {
 		if v := model.NameLabelValue(*j.MsName); v != "" {
 			labels[model.NameLabel] = v
 		}
-	} else {
-		delete(labels, model.NameLabel)
 	}
 
 	if keyLabel := operationKeyLabels[j.Operation]; keyLabel != "" {

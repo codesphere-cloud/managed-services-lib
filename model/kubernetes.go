@@ -139,15 +139,11 @@ var invalidLabelValueChars = regexp.MustCompile(`[^A-Za-z0-9_.-]+`)
 //
 // Characters outside [A-Za-z0-9_.-] become "-", then the result is cut to 63
 // characters, then finally stripped of leading/trailing non-alphanumerics.
-//
-// The label is for display (e.g. in observability), so a lossy mapping is fine; never look a
-// service up by it, use ServiceIDLabel for that.
 func NameLabelValue(name string) string {
 	v := invalidLabelValueChars.ReplaceAllString(name, "-")
 	if len(v) > maxLabelValueLength {
 		v = v[:maxLabelValueLength]
 	}
-	return strings.TrimFunc(v, func(r rune) bool {
-		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
-	})
+	// After the replacement, "-", "_" and "." are the only non-alphanumerics left.
+	return strings.Trim(v, "-_.")
 }
