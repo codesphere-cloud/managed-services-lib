@@ -19,6 +19,7 @@ import (
 // comes from the path instead.
 type serviceFields struct {
 	ID              model.ServiceID `json:"id" binding:"required"`
+	Name            *string         `json:"name"`
 	TeamID          int             `json:"teamId" binding:"gt=0"`
 	CustomSubdomain *string         `json:"customSubdomain"`
 	// Version is a key of the provider's versions; the provider validates it.
@@ -96,6 +97,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 
 		if err := p.Create(c.Request.Context(), CreateRequest[PlanParams, Config, Secrets]{
 			ID:              body.ID,
+			Name:            body.Name,
 			TeamID:          body.TeamID,
 			CustomSubdomain: body.CustomSubdomain,
 			Version:         body.Version,
@@ -131,6 +133,7 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 		}
 		if err := p.Update(c.Request.Context(), UpdateRequest[UpdateParams]{
 			ID:              id,
+			Name:            fields.Name,
 			TeamID:          fields.TeamID,
 			CustomSubdomain: fields.CustomSubdomain,
 			Pause:           fields.Pause,

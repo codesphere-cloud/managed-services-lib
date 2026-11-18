@@ -15,6 +15,7 @@ import (
 // the library decodes them off the request and fills them in here.
 type CreateRequest[PlanParams, Config, Secrets any] struct {
 	ID              model.ServiceID
+	Name            *string
 	TeamID          int
 	CustomSubdomain *string
 	Version         *string // nil = not sent
@@ -28,6 +29,7 @@ type CreateRequest[PlanParams, Config, Secrets any] struct {
 // defines, plus the provider's own partial payload in Params.
 type UpdateRequest[UpdateParams any] struct {
 	ID              model.ServiceID
+	Name            *string
 	TeamID          int
 	CustomSubdomain *string
 	Pause           *bool   // nil = leave as is
