@@ -89,11 +89,15 @@ func ServiceJobSpec(j ServiceJob) client.JobSpec {
 	// Identity labels are authoritative — set them last so caller labels cannot
 	// override them.
 	labels[model.ServiceIDLabel] = j.MsID
+
 	if j.MsName != nil {
 		if v := model.NameLabelValue(*j.MsName); v != "" {
 			labels[model.NameLabel] = v
 		}
+	} else {
+		delete(labels, model.NameLabel)
 	}
+
 	if keyLabel := operationKeyLabels[j.Operation]; keyLabel != "" {
 		labels[keyLabel] = j.Key
 	}
