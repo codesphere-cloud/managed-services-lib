@@ -4,7 +4,11 @@
 package model
 
 import (
+	"regexp"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 // APIResource identifies a Kubernetes API resource.
@@ -112,6 +116,9 @@ const (
 	// ServiceIDLabel is the label key for the managed service ID.
 	ServiceIDLabel = LabelPrefix + "/id"
 
+	// NameLabel is the label key for the managed service name.
+	NameLabel = LabelPrefix + "/name"
+
 	// BackupIDLabel is the label key for a backup ID. Applied to backup Jobs
 	// (alongside ServiceIDLabel) so a service's backups are discoverable.
 	BackupIDLabel = LabelPrefix + "/backup-id"
@@ -122,3 +129,14 @@ const (
 	// TeamIDLabel is the label key for the Codesphere team ID.
 	TeamIDLabel = LabelPrefix + "/team-id"
 )
+
+var invalidLabelValueChars = regexp.MustCompile(`[^A-Za-z0-9_.-]+`)
+
+func SanitizeLabelValue(name string) string {
+	v := invalidLabelValueChars.ReplaceAllString(name, "-")
+	if len(v) > validation.LabelValueMaxLength {
+		v = v[:validation.LabelValueMaxLength]
+	}
+	// After the replacement, "-", "_" and "." are the only non-alphanumerics left.
+	return strings.Trim(v, "-_.")
+}
