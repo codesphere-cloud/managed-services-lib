@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.13.0...v0.14.0) (2026-11-19)
+
+
+### Features
+
+* Add name label to service jobs ([#56](https://github.com/codesphere-cloud/managed-services-lib/issues/56)) ([084498a](https://github.com/codesphere-cloud/managed-services-lib/commit/084498ae0a639fe103796db5d9e5f123b2a018fd))
+* Add service name to fields ([#54](https://github.com/codesphere-cloud/managed-services-lib/issues/54)) ([6789ac5](https://github.com/codesphere-cloud/managed-services-lib/commit/6789ac53a8e3632fad332cdd1515adddd9bfad52))
+
 ## [0.13.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.12.0...v0.13.0) (2026-11-11)
 
 
