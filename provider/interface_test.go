@@ -83,8 +83,7 @@ var _ = Describe("Provider API Contract", func() {
 
 	It("compiles and accepts the expected CreateRequest shape", func() {
 		req := provider.CreateRequest[MockPlan, MockConfig, MockSecrets]{
-			ID:              "svc-123",
-			TeamID:          456,
+			ServiceInfo:     model.ServiceInfo{ID: "svc-123", TeamID: 456},
 			CustomSubdomain: new("custom.example.com"),
 			Plan:            MockPlan{Replicas: 3},
 			Config:          MockConfig{Version: "3.7"},
@@ -98,8 +97,7 @@ var _ = Describe("Provider API Contract", func() {
 
 	It("compiles and accepts the expected UpdateRequest shape with UpdateArgs params", func() {
 		req := provider.UpdateRequest[MockUpdateArgs]{
-			ID:              "svc-123",
-			TeamID:          456,
+			ServiceInfo:     model.ServiceInfo{ID: "svc-123", TeamID: 456},
 			CustomSubdomain: nil,       // Omitted
 			Pause:           new(true), // Provided
 			Params: MockUpdateArgs{
@@ -115,9 +113,8 @@ var _ = Describe("Provider API Contract", func() {
 
 	It("compiles and accepts the expected BackupRequest shape", func() {
 		req := provider.BackupRequest{
-			BackupID:  "backup-789",
-			ServiceID: "svc-123",
-			TeamID:    456,
+			BackupID:    "backup-789",
+			ServiceInfo: model.ServiceInfo{ID: "svc-123", TeamID: 456},
 			Config: model.BackupStoreConfig{
 				Type:        "s3",
 				EndpointURL: "https://s3.example.com",

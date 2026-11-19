@@ -153,10 +153,10 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusCreated))
 			Expect(p.created).To(HaveLen(1))
-			Expect(p.created[0].ID).To(Equal(model.ServiceID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")))
-			Expect(p.created[0].TeamID).To(Equal(7))
+			Expect(p.created[0].ServiceInfo.ID).To(Equal(model.ServiceID("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")))
+			Expect(p.created[0].ServiceInfo.TeamID).To(Equal(7))
 			Expect(p.created[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
-			Expect(p.created[0].Name).To(HaveValue(Equal("my-service")))
+			Expect(p.created[0].ServiceInfo.Name).To(HaveValue(Equal("my-service")))
 		})
 
 		It("leaves name nil when it is not sent", func() {
@@ -164,7 +164,7 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusCreated))
 			Expect(p.created).To(HaveLen(1))
-			Expect(p.created[0].Name).To(BeNil())
+			Expect(p.created[0].ServiceInfo.Name).To(BeNil())
 		})
 
 		It("unwraps plan.parameters into the provider's params type", func() {
@@ -184,9 +184,9 @@ var _ = Describe("Routes", func() {
 			do(http.MethodPost, "/api/v1/fake", `{"id": "svc-1", "teamId": 7, "version": "1.0.0", "config": {"version": "14.2"}}`)
 			do(http.MethodPost, "/api/v1/fake", body)
 
-			Expect(p.created[0].Version).To(HaveValue(Equal("1.0.0")))
+			Expect(p.created[0].ServiceInfo.Version).To(HaveValue(Equal("1.0.0")))
 			Expect(p.created[0].Config).To(Equal(fakeConfig{Version: "14.2"}))
-			Expect(p.created[1].Version).To(BeNil())
+			Expect(p.created[1].ServiceInfo.Version).To(BeNil())
 		})
 
 		It("rejects a malformed body", func() {
@@ -276,10 +276,10 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusNoContent))
 			Expect(p.updated).To(HaveLen(1))
-			Expect(p.updated[0].ID).To(Equal(model.ServiceID("svc-1")))
-			Expect(p.updated[0].TeamID).To(Equal(7))
+			Expect(p.updated[0].ServiceInfo.ID).To(Equal(model.ServiceID("svc-1")))
+			Expect(p.updated[0].ServiceInfo.TeamID).To(Equal(7))
 			Expect(p.updated[0].CustomSubdomain).To(HaveValue(Equal("my-db")))
-			Expect(p.updated[0].Name).To(HaveValue(Equal("my-service")))
+			Expect(p.updated[0].ServiceInfo.Name).To(HaveValue(Equal("my-service")))
 			Expect(p.updated[0].Params.Plan).NotTo(BeNil())
 			Expect(p.updated[0].Params.Plan.Parameters).To(Equal(fakeParams{Storage: 2000}))
 		})
@@ -288,7 +288,7 @@ var _ = Describe("Routes", func() {
 			w := do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
 
 			Expect(w.Code).To(Equal(http.StatusNoContent))
-			Expect(p.updated[0].Name).To(BeNil())
+			Expect(p.updated[0].ServiceInfo.Name).To(BeNil())
 		})
 
 		It("rejects a body whose id does not match the path", func() {
@@ -326,8 +326,8 @@ var _ = Describe("Routes", func() {
 			do(http.MethodPatch, "/api/v1/fake/svc-1", `{"id": "svc-1", "teamId": 7}`)
 
 			Expect(p.updated).To(HaveLen(2))
-			Expect(p.updated[0].Version).To(HaveValue(Equal("1.1.0")))
-			Expect(p.updated[1].Version).To(BeNil())
+			Expect(p.updated[0].ServiceInfo.Version).To(HaveValue(Equal("1.1.0")))
+			Expect(p.updated[1].ServiceInfo.Version).To(BeNil())
 		})
 
 		It("decodes backups.enabled=false as a contract field", func() {
@@ -543,11 +543,10 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(Equal([]backupCall{{
-				BackupID:  "backup-1",
-				ServiceID: "svc-1",
-				TeamID:    7,
-				Config:    backupStoreConfig,
-				Secrets:   model.BackupStoreSecrets{SecretKey: "s"},
+				BackupID:    "backup-1",
+				ServiceInfo: model.ServiceInfo{ID: "svc-1", TeamID: 7},
+				Config:      backupStoreConfig,
+				Secrets:     model.BackupStoreSecrets{SecretKey: "s"},
 			}}))
 		})
 
@@ -556,7 +555,7 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(HaveLen(1))
-			Expect(p.backedUp[0].Name).To(HaveValue(Equal("my db")))
+			Expect(p.backedUp[0].ServiceInfo.Name).To(HaveValue(Equal("my db")))
 		})
 
 		It("rejects a body without an msId", func() {
