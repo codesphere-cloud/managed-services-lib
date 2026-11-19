@@ -44,6 +44,7 @@ type UpdateRequest[UpdateParams any] struct {
 type BackupRequest struct {
 	BackupID      model.BackupId
 	ServiceID     model.ServiceID
+	Name          *string
 	TeamID        int
 	Config        model.BackupStoreConfig
 	Secrets       model.BackupStoreSecrets

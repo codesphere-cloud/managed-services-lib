@@ -48,6 +48,7 @@ type createBody[PlanParams, Config, Secrets any] struct {
 // backupBody is the backup payload; the backup ID comes from the path.
 type backupBody struct {
 	MsID          model.ServiceID          `json:"msId" binding:"required"`
+	Name          *string                  `json:"name"`
 	TeamID        int                      `json:"teamId" binding:"gt=0"`
 	Config        model.BackupStoreConfig  `json:"config"`
 	Secrets       model.BackupStoreSecrets `json:"secrets"`
@@ -233,6 +234,7 @@ func parseBackup(c *gin.Context) (BackupRequest, error) {
 	return BackupRequest{
 		BackupID:      model.BackupId(c.Param("id")),
 		ServiceID:     body.MsID,
+		Name:          body.Name,
 		TeamID:        body.TeamID,
 		Config:        body.Config,
 		Secrets:       body.Secrets,

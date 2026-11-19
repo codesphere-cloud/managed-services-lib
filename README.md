@@ -59,7 +59,7 @@ the contract's own fields or envelopes yourself:
 | `id`, `name`, `teamId`, `customSubdomain`, `version` — fields on the request struct | `PlanParams` — contents of `plan.parameters` |
 | `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
-| `msId` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
+| `msId`, `name` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
 | the `{plan, config, details, pause, conditions, utilization, maintenance, version}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
 | HTTP status codes and error mapping | |
 
@@ -85,8 +85,9 @@ type Backups interface {
 }
 ```
 
-`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), `TeamID`, the backup store's
-`Config` (`model.BackupStoreConfig`) and `Secrets` (`model.BackupStoreSecrets`), and `RetentionDays`.
+`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), the optional service `Name`,
+`TeamID`, the backup store's `Config` (`model.BackupStoreConfig`) and `Secrets`
+(`model.BackupStoreSecrets`), and `RetentionDays`.
 The same store arrives in `CreateRequest.RecoverFrom`, which names either a backup `ID` or, for
 point-in-time recovery, a source `MsID` and `Time`. Both are validated against their `binding`
 tags before your provider is called. A provider that supports backups implements `Backups` and
@@ -138,7 +139,7 @@ Some operations (backups, restores, migrations) are easier to run as one-shot Ku
 
 ```go
 spec := provider.ServiceJobSpec(provider.ServiceJob{
-	Operation: provider.JobOpBackup, MsID: id, Key: backupID,
+	Operation: provider.JobOpBackup, MsID: id, MsName: name, Key: backupID,
 	Image: img, Command: []string{"/backup"},
 	Env: env, Secrets: secrets, // whatever your image reads
 	ImagePullSecrets: []string{"regcred"}, // for a private registry
