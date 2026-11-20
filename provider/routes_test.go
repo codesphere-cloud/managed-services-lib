@@ -543,12 +543,19 @@ var _ = Describe("Routes", func() {
 
 			Expect(w.Code).To(Equal(http.StatusAccepted))
 			Expect(p.backedUp).To(Equal([]backupCall{{
-				BackupID:  "backup-1",
-				ServiceID: "svc-1",
-				TeamID:    7,
-				Config:    backupStoreConfig,
-				Secrets:   model.BackupStoreSecrets{SecretKey: "s"},
+				ServiceInfoBackup: model.ServiceInfoBackup{MsID: "svc-1", TeamID: 7},
+				BackupID:          "backup-1",
+				Config:            backupStoreConfig,
+				Secrets:           model.BackupStoreSecrets{SecretKey: "s"},
 			}}))
+		})
+
+		It("passes the service name through", func() {
+			w := do(http.MethodPut, "/api/v1/fake/backups/backup-1", `{"msId": "svc-1", "msName": "my db", "teamId": 7, `+backupStoreJSON+`}`)
+
+			Expect(w.Code).To(Equal(http.StatusAccepted))
+			Expect(p.backedUp).To(HaveLen(1))
+			Expect(p.backedUp[0].MsName).To(HaveValue(Equal("my db")))
 		})
 
 		It("rejects a body without an msId", func() {

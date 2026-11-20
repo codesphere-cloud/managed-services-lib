@@ -22,8 +22,7 @@ type serviceFields struct {
 	Name            *string         `json:"name"`
 	TeamID          int             `json:"teamId" binding:"gt=0"`
 	CustomSubdomain *string         `json:"customSubdomain"`
-	// Version is a key of the provider's versions; the provider validates it.
-	Version *string `json:"version"`
+	Version         *string         `json:"version"` // a key of the provider's versions; the provider validates it
 }
 
 // updateFields are the service-level fields on an update payload. Pause is a
@@ -45,10 +44,15 @@ type createBody[PlanParams, Config, Secrets any] struct {
 	RecoverFrom *model.RecoverFrom         `json:"recoverFrom,omitempty"`
 }
 
+type serviceFieldsBackup struct {
+	MsID   model.ServiceID `json:"msId" binding:"required"`
+	MsName *string         `json:"msName"`
+	TeamID int             `json:"teamId" binding:"gt=0"`
+}
+
 // backupBody is the backup payload; the backup ID comes from the path.
 type backupBody struct {
-	MsID          model.ServiceID          `json:"msId" binding:"required"`
-	TeamID        int                      `json:"teamId" binding:"gt=0"`
+	serviceFieldsBackup
 	Config        model.BackupStoreConfig  `json:"config"`
 	Secrets       model.BackupStoreSecrets `json:"secrets"`
 	RetentionDays *int                     `json:"retentionDays,omitempty"`
@@ -95,12 +99,16 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			return
 		}
 
+		service := model.ServiceInfo{
+			ID:      body.ID,
+			Name:    body.Name,
+			TeamID:  body.TeamID,
+			Version: body.Version,
+		}
+
 		if err := p.Create(c.Request.Context(), CreateRequest[PlanParams, Config, Secrets]{
-			ID:              body.ID,
-			Name:            body.Name,
-			TeamID:          body.TeamID,
+			ServiceInfo:     service,
 			CustomSubdomain: body.CustomSubdomain,
-			Version:         body.Version,
 			Plan:            body.Plan.Parameters,
 			Config:          body.Config,
 			Secrets:         body.Secrets,
@@ -131,13 +139,18 @@ func RegisterRoutes[PlanParams, Config, Secrets, Details, UpdateParams any](
 			c.JSON(http.StatusBadRequest, gin.H{"error": "id in body must match path"})
 			return
 		}
+
+		service := model.ServiceInfo{
+			ID:      id,
+			Name:    fields.Name,
+			TeamID:  fields.TeamID,
+			Version: fields.Version,
+		}
+
 		if err := p.Update(c.Request.Context(), UpdateRequest[UpdateParams]{
-			ID:              id,
-			Name:            fields.Name,
-			TeamID:          fields.TeamID,
+			ServiceInfo:     service,
 			CustomSubdomain: fields.CustomSubdomain,
 			Pause:           fields.Pause,
-			Version:         fields.Version,
 			Backups:         fields.Backups,
 			Params:          args,
 		}); err != nil {
@@ -230,13 +243,19 @@ func parseBackup(c *gin.Context) (BackupRequest, error) {
 	if err := c.ShouldBindJSON(&body); err != nil {
 		return BackupRequest{}, err
 	}
+
+	serviceInfo := model.ServiceInfoBackup{
+		MsID:   body.MsID,
+		MsName: body.MsName,
+		TeamID: body.TeamID,
+	}
+
 	return BackupRequest{
-		BackupID:      model.BackupId(c.Param("id")),
-		ServiceID:     body.MsID,
-		TeamID:        body.TeamID,
-		Config:        body.Config,
-		Secrets:       body.Secrets,
-		RetentionDays: body.RetentionDays,
+		ServiceInfoBackup: serviceInfo,
+		BackupID:          model.BackupId(c.Param("id")),
+		Config:            body.Config,
+		Secrets:           body.Secrets,
+		RetentionDays:     body.RetentionDays,
 	}, nil
 }
 

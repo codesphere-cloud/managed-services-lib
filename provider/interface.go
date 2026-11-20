@@ -14,11 +14,8 @@ import (
 // id/teamId/customSubdomain fields or the plan.parameters wrapper themselves —
 // the library decodes them off the request and fills them in here.
 type CreateRequest[PlanParams, Config, Secrets any] struct {
-	ID              model.ServiceID
-	Name            *string
-	TeamID          int
+	model.ServiceInfo
 	CustomSubdomain *string
-	Version         *string // nil = not sent
 	Plan            PlanParams
 	Config          Config
 	Secrets         Secrets
@@ -28,12 +25,9 @@ type CreateRequest[PlanParams, Config, Secrets any] struct {
 // UpdateRequest is a decoded PATCH: the service-level fields the contract
 // defines, plus the provider's own partial payload in Params.
 type UpdateRequest[UpdateParams any] struct {
-	ID              model.ServiceID
-	Name            *string
-	TeamID          int
+	model.ServiceInfo
 	CustomSubdomain *string
-	Pause           *bool   // nil = leave as is
-	Version         *string // nil = leave as is
+	Pause           *bool // nil = leave as is
 	Params          UpdateParams
 	Backups         *model.ServiceBackups // nil = leave backups as is
 }
@@ -42,9 +36,8 @@ type UpdateRequest[UpdateParams any] struct {
 // and deleting a backup, since Codesphere sends the backup store's coordinates
 // with each one.
 type BackupRequest struct {
+	model.ServiceInfoBackup
 	BackupID      model.BackupId
-	ServiceID     model.ServiceID
-	TeamID        int
 	Config        model.BackupStoreConfig
 	Secrets       model.BackupStoreSecrets
 	RetentionDays *int

@@ -5,6 +5,22 @@ package model
 
 import "time"
 
+// ServiceInfo identifies the service a request is about. The library fills it
+// from the contract's service-level fields; Name and Version are nil when not
+// sent
+type ServiceInfo struct {
+	ID      ServiceID
+	TeamID  int
+	Name    *string
+	Version *string
+}
+
+type ServiceInfoBackup struct {
+	MsID   ServiceID
+	TeamID int
+	MsName *string
+}
+
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
 
