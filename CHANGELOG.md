@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.15.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.14.0...v0.15.0) (2026-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add `MsName` to backup requests and model grouping ([#57](https://github.com/codesphere-cloud/managed-services-lib/issues/57))
+
+### Features
+
+* Add `MsName` to backup requests and model grouping ([#57](https://github.com/codesphere-cloud/managed-services-lib/issues/57)) ([ce3ebf0](https://github.com/codesphere-cloud/managed-services-lib/commit/ce3ebf089c98b30e125dd4abeea221c5d67bade0))
+
 ## [0.14.0](https://github.com/codesphere-cloud/managed-services-lib/compare/v0.13.0...v0.14.0) (2026-11-19)
 
 
