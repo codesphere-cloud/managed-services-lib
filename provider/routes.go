@@ -44,11 +44,15 @@ type createBody[PlanParams, Config, Secrets any] struct {
 	RecoverFrom *model.RecoverFrom         `json:"recoverFrom,omitempty"`
 }
 
+type serviceFieldsBackup struct {
+	MsID   model.ServiceID `json:"msId" binding:"required"`
+	MsName *string         `json:"msName"`
+	TeamID int             `json:"teamId" binding:"gt=0"`
+}
+
 // backupBody is the backup payload; the backup ID comes from the path.
 type backupBody struct {
-	MsID          model.ServiceID          `json:"msId" binding:"required"`
-	Name          *string                  `json:"name"`
-	TeamID        int                      `json:"teamId" binding:"gt=0"`
+	serviceFieldsBackup
 	Config        model.BackupStoreConfig  `json:"config"`
 	Secrets       model.BackupStoreSecrets `json:"secrets"`
 	RetentionDays *int                     `json:"retentionDays,omitempty"`
@@ -240,18 +244,18 @@ func parseBackup(c *gin.Context) (BackupRequest, error) {
 		return BackupRequest{}, err
 	}
 
-	service := model.ServiceInfo{
-		ID:     body.MsID,
-		Name:   body.Name,
+	serviceInfo := model.ServiceInfoBackup{
+		MsID:   body.MsID,
+		MsName: body.MsName,
 		TeamID: body.TeamID,
 	}
 
 	return BackupRequest{
-		BackupID:      model.BackupId(c.Param("id")),
-		ServiceInfo:   service,
-		Config:        body.Config,
-		Secrets:       body.Secrets,
-		RetentionDays: body.RetentionDays,
+		ServiceInfoBackup: serviceInfo,
+		BackupID:          model.BackupId(c.Param("id")),
+		Config:            body.Config,
+		Secrets:           body.Secrets,
+		RetentionDays:     body.RetentionDays,
 	}, nil
 }
 

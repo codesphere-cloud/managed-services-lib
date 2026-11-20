@@ -30,10 +30,15 @@ type Provider[PlanParams, Config, Secrets, Details, UpdateParams any] interface 
 
 
 ```go
+type ServiceInfo struct { // in package model
+	ID      ServiceID
+	Name    *string // user-facing service name, nil if not sent
+	TeamID  int
+	Version *string // key of your versions, nil if not sent
+}
+
 type CreateRequest[PlanParams, Config, Secrets any] struct {
-	ID              model.ServiceID
-	Name            *string // user-facing service name, nil if not sent
-	TeamID          int
+	model.ServiceInfo
 	CustomSubdomain *string
 	Plan            PlanParams // contents of plan.parameters
 	Config          Config
@@ -42,24 +47,26 @@ type CreateRequest[PlanParams, Config, Secrets any] struct {
 }
 
 type UpdateRequest[UpdateParams any] struct {
-	ID              model.ServiceID
-	Name            *string // current service name, nil if not sent
-	TeamID          int
+	model.ServiceInfo
 	CustomSubdomain *string
-	Pause           *bool       // nil = leave as is
-	Params          UpdateParams // your partial PATCH payload
+	Pause           *bool                 // nil = leave as is
+	Params          UpdateParams          // your partial PATCH payload
+	Backups         *model.ServiceBackups // nil = leave backups as is
 }
 ```
+
+The contract's service-level fields arrive together in the embedded `ServiceInfo`, so read them
+as `req.ID`, `req.Name` and so on.
 
 The split between the contract and your provider is visible in the signatures — you never declare
 the contract's own fields or envelopes yourself:
 
 | The contract defines | You define |
 |---|---|
-| `id`, `name`, `teamId`, `customSubdomain`, `version` — fields on the request struct | `PlanParams` — contents of `plan.parameters` |
+| `id`, `name`, `teamId`, `version` — in `ServiceInfo`; `customSubdomain` on the request struct | `PlanParams` — contents of `plan.parameters` |
 | `pause` on update, and `pause` in the status response | `Config` — contents of `config` |
 | the `plan: {parameters: …}` wrapper, unwrapped on the way in and re-wrapped on the way out | `Secrets` — contents of `secrets` |
-| `msId`, `name` and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
+| `msId`, `msName`, `teamId` (in `ServiceInfoBackup`) and `retentionDays` on backup requests | `Details` — read-only status data (hostnames, ports, readiness) |
 | the `{plan, config, details, pause, conditions, utilization, maintenance, version}` status envelope (`ServiceStatus`) | `UpdateParams` — your partial `PATCH` payload |
 | HTTP status codes and error mapping | |
 
@@ -85,8 +92,8 @@ type Backups interface {
 }
 ```
 
-`BackupRequest` carries `BackupID`, `ServiceID` (the `msId` field), the optional service `Name`,
-`TeamID`, the backup store's `Config` (`model.BackupStoreConfig`) and `Secrets`
+`BackupRequest` embeds `model.ServiceInfoBackup` (`MsID`, `MsName`, `TeamID`) and carries
+`BackupID`, the backup store's `Config` (`model.BackupStoreConfig`) and `Secrets`
 (`model.BackupStoreSecrets`), and `RetentionDays`.
 The same store arrives in `CreateRequest.RecoverFrom`, which names either a backup `ID` or, for
 point-in-time recovery, a source `MsID` and `Time`. Both are validated against their `binding`

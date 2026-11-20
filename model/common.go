@@ -15,6 +15,12 @@ type ServiceInfo struct {
 	Version *string
 }
 
+type ServiceInfoBackup struct {
+	MsID   ServiceID
+	TeamID int
+	MsName *string
+}
+
 // ServiceID is a unique identifier for a managed service instance.
 type ServiceID string
 

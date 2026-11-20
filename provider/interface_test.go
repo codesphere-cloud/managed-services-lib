@@ -113,8 +113,8 @@ var _ = Describe("Provider API Contract", func() {
 
 	It("compiles and accepts the expected BackupRequest shape", func() {
 		req := provider.BackupRequest{
-			BackupID:    "backup-789",
-			ServiceInfo: model.ServiceInfo{ID: "svc-123", TeamID: 456},
+			ServiceInfoBackup: model.ServiceInfoBackup{MsID: "svc-123", TeamID: 456},
+			BackupID:          "backup-789",
 			Config: model.BackupStoreConfig{
 				Type:        "s3",
 				EndpointURL: "https://s3.example.com",
